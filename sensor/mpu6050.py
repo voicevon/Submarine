@@ -169,9 +169,9 @@ class Mpu6050:
         y = y / accel_scale_modifier
         z = z / accel_scale_modifier
  
-        if g is True:
+        if g:
             return {'x': x, 'y': y, 'z': z}
-        elif g is False:
+        else:
             x = x * self.GRAVITIY_MS2
             y = y * self.GRAVITIY_MS2
             z = z * self.GRAVITIY_MS2

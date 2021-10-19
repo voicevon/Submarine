@@ -1,10 +1,11 @@
 # from typing_extensions import ParamSpec
 from output.propeller import Propeller
-from camera.single_camera import SingleCamera
-from camera.single_camera import SingleCamera,CameraFactory
+# from camera.single_camera import SingleCamera
 from sensor.water_depth_sensor import WaterDepthSensor
-from sensor.mpu6050 import Mpu6050
+# from sensor.mpu6050 import Mpu6050
 
+import adafruit_ads1x15.ads1015 as ADS                               
+from adafruit_ads1x15.analog_in import AnalogIn
 import serial
 from serial.serialutil import Timeout
 
@@ -12,8 +13,9 @@ import board
 import busio
 import smbus
 
-import Adafruit_ADS1x15.ADS1x15 as ADS
-from adafruit_ads1x15.analog_in import AnalogIn
+from camera.single_camera import SingleCamera,CameraFactory
+
+
 # from adafruit_ads1x15.ads1x15 import Mode
 # from time import time, sleep
 
@@ -31,12 +33,26 @@ class Direction:
 class UwBot():
     def __init__(self):
         # Init GPIO
-        self.__propeller = Propeller()
-        self.cameras = []
-        for i in range[1,6]:
-            self.cameras.append(CameraFactory.CreateSingleCamera(i))
+        print("Unerwater Robot is Initializing......")
+        i2c_bus = busio.I2C(board.SCL_1, board.SDA_1, frequency=100000)
 
-        pass
+        ads1015_address = 0x48
+        # self.__ads1015 = ADS.ADS1015(i2c_bus1, address=ads1015_address)
+        self.__ads1015 = ADS.ADS1015(i2c_bus)
+
+        self.__propeller = Propeller(i2c_bus)
+
+
+        self.__mpu6050 = Mpu6050(0x68)
+
+        myFactory = CameraFactory()
+        self.cameras = []
+        for i in range(6):
+            new_camera = myFactory.CreateSingleCamera(i)
+            self.cameras.append(new_camera)
+
+        print("Unerwater Robot is Initialized......")
+
 
 
     def move(self, direction:Direction, speed:float) :
@@ -94,8 +110,8 @@ class UwBot():
         return temperature
 
     def read_Gavity_orientation (self):
-        a_x,a_y,a_z = Mpu6050.get_accel_data()
-        g_x,g_y,g_z = Mpu6050.get_gyro_data()
+        a_x,a_y,a_z = self.__mpu6050.get_accel_data()
+        g_x,g_y,g_z = self.__mpu6050.get_gyro_data()
         return a_x,a_y,a_z,g_x,g_y,g_z
 
     def read_user_button(self):
@@ -119,9 +135,7 @@ class UwBot():
         '''
         range is [0,100]
         '''
-        ads1015_address = 0x48
-        i2c_bus1 = (busio.I2C(board.SCL_1, board.SDA_1, frequency=100000))
-        ads = ADS.ADS1015(i2c_bus1, address=ads1015_address)
+
         ads1015_channel = AnalogIn(ads, ADS.P1) 
         percent = (1 - (ads1015_channel.voltage - 2.55) / -0.35) * 100
         return percent
@@ -154,4 +168,4 @@ class UwBot():
 
 if __name__ == '__main__':
 
-    pass
+    test = UwBot()

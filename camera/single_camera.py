@@ -1,6 +1,6 @@
 import gi
 
-from cam_gs_nolink import message
+from camera.cam_gs_nolink import message
 
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst, GObject
@@ -20,7 +20,7 @@ class SingleCamera:
     def __CreatePipeline(self) -> None:
         print("Creating pipline camera", self.id)
         self.pipeline = [] 
-        self.pipeline.append(Gst.parse_launch(self.command_cam1))
+        self.pipeline.append(Gst.parse_launch(self.command))
         self.loop = GObject.MainLoop()   #?? Feng
         self.bus.append(self.pipeline[0].get_bus())
         self.bus[0].connect("message", message, self.loop)

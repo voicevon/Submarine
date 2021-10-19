@@ -1,8 +1,8 @@
-from water_depth_sensor import WaterDepthSensor
+from sensor.water_depth_sensor import WaterDepthSensor
 from  adafruit_servokit import ServoKit
 from adafruit_pca9685 import PCA9685
 
-import board
+# import board
 import busio
 
 
@@ -13,14 +13,11 @@ class Propeller():
 
     '''
 
-    def __init__(self):
+    def __init__(self, i2c_bus: busio.I2C):
         # init PCA9685
         pwm_controller_address = 0x40
-        i2c_bus0=(busio.I2C(board.SCL_1,board.SDA_1,frequency=400000))
-        ServoKit(channels=16,i2c=i2c_bus0,address=pwm_controller_address,frequency=49.5)
-       # self.__water_depth_sensor = WaterDepthSensor()
-        #self.__target_water_depth = 0
-        # self.__moving_speed = 0
+        # i2c_bus0=(busio.I2C(board.SCL_1,board.SDA_1,frequency=400000))
+        ServoKit(channels=16, i2c=i2c_bus, address=pwm_controller_address, frequency=49.5)
 
 
     def move_forward(self, speed):
