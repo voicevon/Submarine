@@ -1,8 +1,9 @@
-from typing_extensions import ParamSpec
-from propeller import Propeller
-from single_camera import SingleCamera, SingleCamra
-from water_depth_sensor import WaterDepthSensor
-import mpu6050
+# from typing_extensions import ParamSpec
+from output.propeller import Propeller
+from camera.single_camera import SingleCamera
+from camera.single_camera import SingleCamera,CameraFactory
+from sensor.water_depth_sensor import WaterDepthSensor
+from sensor.mpu6050 import Mpu6050
 
 import serial
 from serial.serialutil import Timeout
@@ -13,9 +14,8 @@ import smbus
 
 import Adafruit_ADS1x15.ADS1x15 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
-from adafruit_ads1x15.ads1x15 import Mode
-from time import time, sleep
-from single_camera import SingleCamera,CameraFactory
+# from adafruit_ads1x15.ads1x15 import Mode
+# from time import time, sleep
 
 
 class Direction:
@@ -79,7 +79,7 @@ class UwBot():
         pass
 
     def read_room_temperature(self):
-        room_temperture = mpu6050.Mpu6050.get_temp()
+        room_temperture = Mpu6050.get_temp()
         return room_temperture
 
     def read_water_temperature(self):
@@ -94,8 +94,8 @@ class UwBot():
         return temperature
 
     def read_Gavity_orientation (self):
-        a_x,a_y,a_z = mpu6050.Mpu6050.get_accel_data()
-        g_x,g_y,g_z = mpu6050.Mpu6050.get_gyro_data()
+        a_x,a_y,a_z = Mpu6050.get_accel_data()
+        g_x,g_y,g_z = Mpu6050.get_gyro_data()
         return a_x,a_y,a_z,g_x,g_y,g_z
 
     def read_user_button(self):
@@ -153,8 +153,5 @@ class UwBot():
     
 
 if __name__ == '__main__':
-
-   
-    
 
     pass
