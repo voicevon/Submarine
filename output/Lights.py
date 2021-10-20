@@ -12,12 +12,8 @@ class SingleLight:
 
     def __init__(self, pin) -> None:
         self.__pin = pin
-
-        for index in range(6):
-            # GPIO.setup(35, GPIO.OUT, initial=GPIO.LOW)
-            GPIO.setup(self.__pin, GPIO.OUT, initial=GPIO.LOW)
-
-            print(index, 'OK')
+        GPIO.setup(self.__pin, GPIO.OUT, initial=GPIO.LOW)
+        print('      SingleLight is created. on GPIO: ', pin )
 
     def TurnOnOff(self, onoff:bool) -> None:
         GPIO.output(self.__pin, onoff)

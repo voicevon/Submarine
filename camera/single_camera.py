@@ -18,7 +18,7 @@ class SingleCamera:
 
 
     def __CreatePipeline(self) -> None:
-        print("Creating pipline camera", self.id)
+        # print("Creating pipline camera", self.id)
         self.pipeline = [] 
         self.pipeline.append(Gst.parse_launch(self.command))
         self.loop = GObject.MainLoop()   #?? Feng

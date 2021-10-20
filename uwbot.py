@@ -58,24 +58,24 @@ class UwBot():
         # i2c_bus2 = busio.I2C(board.SCL_2, board.SDA_2, frequency=100000)
         
         self.__mpu6050 = adafruit_mpu6050.MPU6050(i2c_bus, address=0x68)
-        print("Uwbot.Init Mpu6050 is done...")
+        print("    Uwbot.Init Mpu6050 is done...")
 
         ads1015_address = 0x48
         # self.__ads1015 = ADS.ADS1015(i2c_bus1, address=ads1015_address)
         self.__ads1015 = ADS.ADS1015(i2c_bus, address=ads1015_address)
-        print("Uwbot.Init Ads1015 is done...")
+        print("    Uwbot.Init Ads1015 is done...")
 
         self.__propeller = Propeller(i2c_bus)
-        print("Uwbot.Init Propeller is done...")
+        print("    Uwbot.Init Propeller is done...")
 
 
-
+        print("Uwbot.Creatint cameras")
         myFactory = CameraFactory()
         self.cameras = []
         for i in range(6):
             new_camera = myFactory.CreateSingleCamera(i)
             self.cameras.append(new_camera)
-            print("Uwbot.Create Camera %i  is done..." %i)
+            print("     Uwbot.Create Camera %i  is done..." %i)
 
         print("Unerwater Robot is Initialized......")
 
@@ -209,12 +209,12 @@ class UwBot():
             for i in range(6):
                 self.TurnOnLignt(i)
             print("All is on")
-            time.sleep(1)
+            time.sleep(5)
 
             for i in range(6):
                 self.TurnOffLignt(i)
             print ("All is off")
-            time.sleep(1)
+            time.sleep(5)
         
 
 
