@@ -39,7 +39,6 @@ class UwBot():
             self.__lights.append(new_light)
         print("Uwbot.Init Lights is done...")
 
-
         self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', 
                           baudrate=9600)
         self.__uart_port.timeout = 3
@@ -209,12 +208,12 @@ class UwBot():
             for i in range(6):
                 self.TurnOnLignt(i)
             print("All is on")
-            time.sleep(5)
+            time.sleep(2)
 
             for i in range(6):
                 self.TurnOffLignt(i)
             print ("All is off")
-            time.sleep(5)
+            time.sleep(2)
         
 
 
