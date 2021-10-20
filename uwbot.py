@@ -11,9 +11,12 @@ from serial.serialutil import Timeout
 
 import board
 import busio
-import smbus
+# import smbus
 
 from camera.single_camera import SingleCamera,CameraFactory
+# from sensor.mpu6050 import Mpu6050
+  
+import adafruit_mpu6050   # https://learn.adafruit.com/mpu6050-6-dof-accelerometer-and-gyro/python-and-circuitpython
 
 
 # from adafruit_ads1x15.ads1x15 import Mode
@@ -34,22 +37,39 @@ class UwBot():
     def __init__(self):
         # Init GPIO
         print("Unerwater Robot is Initializing......")
+        self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', 
+                          baudrate=9600)
+        self.__uart_port.timeout = 3
+        if self.__uart_port.isOpen():
+            print("Uwbot.Init UART is done...")
+        tt = self.read_distance_to_bottom()
+        print(tt)
+
         i2c_bus = busio.I2C(board.SCL_1, board.SDA_1, frequency=100000)
+        # List I2C device:       sudo i2cdetect -r -y 0
+        print("Uwbot.Init I2C-Bus is done...")
+
+        # i2c_bus2 = busio.I2C(board.SCL_2, board.SDA_2, frequency=100000)
+        
+        self.__mpu6050 = adafruit_mpu6050.MPU6050(i2c_bus, address=0x68)
+        print("Uwbot.Init Mpu6050 is done...")
 
         ads1015_address = 0x48
         # self.__ads1015 = ADS.ADS1015(i2c_bus1, address=ads1015_address)
-        self.__ads1015 = ADS.ADS1015(i2c_bus)
+        self.__ads1015 = ADS.ADS1015(i2c_bus, address=ads1015_address)
+        print("Uwbot.Init Ads1015 is done...")
 
         self.__propeller = Propeller(i2c_bus)
+        print("Uwbot.Init Propeller is done...")
 
 
-        self.__mpu6050 = Mpu6050(0x68)
 
         myFactory = CameraFactory()
         self.cameras = []
         for i in range(6):
             new_camera = myFactory.CreateSingleCamera(i)
             self.cameras.append(new_camera)
+            print("Uwbot.Create Camera %i  is done..." %i)
 
         print("Unerwater Robot is Initialized......")
 
@@ -110,23 +130,26 @@ class UwBot():
         return temperature
 
     def read_Gavity_orientation (self):
-        a_x,a_y,a_z = self.__mpu6050.get_accel_data()
-        g_x,g_y,g_z = self.__mpu6050.get_gyro_data()
-        return a_x,a_y,a_z,g_x,g_y,g_z
+        return self.__mpu6050.acceleration
 
     def read_user_button(self):
         pass
 
     def read_distance_to_bottom(self):
-        uart_port = serial.Serial(port= '/dev/ttyTHS1', 
-                          baudrate=9600)
-        print(uart_port.isOpen())
-        data = [0x6f, 0x01, 0x06, 0xd0]
-        uart_port.write(data)    
-        uart_port.timeout = 1
-        received_data = uart_port.readall()   
+
+        command = [0x6f, 0x01, 0x06, 0xd0]
+        self.__uart_port.write(command) 
+        received_data = self.__uart_port.readall()  
+        # print(received_data) 
         distance = received_data[4]*256 + received_data[5]
         return distance
+    def read_water_temperature(self):
+        command = [0x6f, 0x01, 0x06, 0xd0]
+        self.__uart_port.write(command) 
+        received_data = self.__uart_port.readall()  
+        # print(received_data) 
+        temperature = received_data[3]
+        return temperature
 
     def read_water_depth(self):
         pass
@@ -136,7 +159,7 @@ class UwBot():
         range is [0,100]
         '''
 
-        ads1015_channel = AnalogIn(ads, ADS.P1) 
+        ads1015_channel = AnalogIn(self.__ads1015, ADS.P1) 
         percent = (1 - (ads1015_channel.voltage - 2.55) / -0.35) * 100
         return percent
 

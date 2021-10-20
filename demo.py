@@ -1,6 +1,8 @@
 from uwbot import UwBot, Direction
 
 
+#   sudo chmod 777 /dev/ttyTHS1
+
 mybot =  UwBot()
 
 result = mybot.read_Gavity_orientation()
