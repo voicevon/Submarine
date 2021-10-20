@@ -1,8 +1,5 @@
-# from typing_extensions import ParamSpec
 from output.propeller import Propeller
-# from camera.single_camera import SingleCamera
 from sensor.water_depth_sensor import WaterDepthSensor
-# from sensor.mpu6050 import Mpu6050
 
 import adafruit_ads1x15.ads1015 as ADS                               
 from adafruit_ads1x15.analog_in import AnalogIn
@@ -11,16 +8,13 @@ from serial.serialutil import Timeout
 
 import board
 import busio
-# import smbus
+from output.Lights import InitGPIO, SingleLight
+
 
 from camera.single_camera import SingleCamera,CameraFactory
-# from sensor.mpu6050 import Mpu6050
   
 import adafruit_mpu6050   # https://learn.adafruit.com/mpu6050-6-dof-accelerometer-and-gyro/python-and-circuitpython
 import time
-
-# from adafruit_ads1x15.ads1x15 import Mode
-# from time import time, sleep
 
 
 class Direction:
@@ -37,6 +31,15 @@ class UwBot():
     def __init__(self):
         # Init GPIO
         print("Unerwater Robot is Initializing......")
+        self.__lights = []
+        light_pins = [35,33,31,29,19,15]
+        InitGPIO()
+        for i in range(6):
+            new_light = SingleLight(light_pins[i])
+            self.__lights.append(new_light)
+        print("Uwbot.Init Lights is done...")
+
+
         self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', 
                           baudrate=9600)
         self.__uart_port.timeout = 3
@@ -150,9 +153,11 @@ class UwBot():
                 return distance
             time.sleep(0.5)
         
+    def TurnOnLignt(self,index:int) -> None:
+        self.__lights[index].TurnOnOff(True)
 
-
-
+    def TurnOffLignt(self,index:int) -> None:
+        self.__lights[index].TurnOnOff(False)
 
     def read_water_temperature(self):
         # command = [0x6f, 0x01, 0x06, 0xd0]
@@ -199,8 +204,23 @@ class UwBot():
     def FindFish(self, camera_id:int, FishName:str) -> bool:
         pass
 
+    def test(self):
+        while True:
+            for i in range(6):
+                self.TurnOnLignt(i)
+            print("All is on")
+            time.sleep(1)
+
+            for i in range(6):
+                self.TurnOffLignt(i)
+            print ("All is off")
+            time.sleep(1)
+        
+
+
     
 
 if __name__ == '__main__':
 
     test = UwBot()
+    test.test()
