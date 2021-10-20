@@ -17,7 +17,7 @@ from camera.single_camera import SingleCamera,CameraFactory
 # from sensor.mpu6050 import Mpu6050
   
 import adafruit_mpu6050   # https://learn.adafruit.com/mpu6050-6-dof-accelerometer-and-gyro/python-and-circuitpython
-
+import time
 
 # from adafruit_ads1x15.ads1x15 import Mode
 # from time import time, sleep
@@ -42,8 +42,11 @@ class UwBot():
         self.__uart_port.timeout = 3
         if self.__uart_port.isOpen():
             print("Uwbot.Init UART is done...")
-        tt = self.read_distance_to_bottom()
-        print(tt)
+            # self.test()
+        else:
+            print("  !!!!    !!!!  !!!!   !!!!  Uwbot.Init UART is Failed...")
+        # tt = self.read_distance_to_bottom()
+        # print(tt)
 
         i2c_bus = busio.I2C(board.SCL_1, board.SDA_1, frequency=100000)
         # List I2C device:       sudo i2cdetect -r -y 0
@@ -80,7 +83,6 @@ class UwBot():
         direction list = ['FORWARD', 'BACKWARD']
         speed must in range [0,100]
         '''
-        Propeller.__init__(self)
         now_speed_clockwise = 83.55 * ((101 - speed) / 100)
         now_speed_counterclockwise = 180 - 83.55 * ((101 - speed) / 100)
         if direction == Direction.FORWARD:
@@ -137,19 +139,29 @@ class UwBot():
 
     def read_distance_to_bottom(self):
 
-        command = [0x6f, 0x01, 0x06, 0xd0]
-        self.__uart_port.write(command) 
-        received_data = self.__uart_port.readall()  
+        # command = [0x6f, 0x01, 0x06, 0xd0]
+        # self.__uart_port.write(command) 
+        # received_data = self.__uart_port.readall() 
         # print(received_data) 
-        distance = received_data[4]*256 + received_data[5]
-        return distance
+        while True:
+            received_data = self.__uart_port.read_all() 
+            if received_data.__len__() > 5: 
+                distance = received_data[4]*256 + received_data[5]
+                return distance
+            time.sleep(0.5)
+        
+
+
+
+
     def read_water_temperature(self):
-        command = [0x6f, 0x01, 0x06, 0xd0]
-        self.__uart_port.write(command) 
-        received_data = self.__uart_port.readall()  
-        # print(received_data) 
-        temperature = received_data[3]
-        return temperature
+        # command = [0x6f, 0x01, 0x06, 0xd0]
+        # self.__uart_port.write(command) 
+        while True:
+            received_data = self.__uart_port.read_all()  
+            if received_data.__len__() > 5: 
+                temperature = received_data[3]
+                return temperature
 
     def read_water_depth(self):
         pass
