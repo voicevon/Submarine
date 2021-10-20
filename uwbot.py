@@ -29,8 +29,10 @@ class Direction:
 
 class UwBot():
     def __init__(self):
-        # Init GPIO
         print("Unerwater Robot is Initializing......")
+
+        #-----------------------------------------------------------------------
+        self.__started_logger = False
         self.__lights = []
         light_pins = [35,33,31,29,19,15]
         InitGPIO()
@@ -39,35 +41,35 @@ class UwBot():
             self.__lights.append(new_light)
         print("Uwbot.Init Lights is done...")
 
+        #-----------------------------------------------------------------------
         self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', 
                           baudrate=9600)
         self.__uart_port.timeout = 3
         if self.__uart_port.isOpen():
             print("Uwbot.Init UART is done...")
-            # self.test()
         else:
             print("  !!!!    !!!!  !!!!   !!!!  Uwbot.Init UART is Failed...")
-        # tt = self.read_distance_to_bottom()
-        # print(tt)
 
+        #-----------------------------------------------------------------------
         i2c_bus = busio.I2C(board.SCL_1, board.SDA_1, frequency=100000)
-        # List I2C device:       sudo i2cdetect -r -y 0
+        # List I2C device:       
+        #   sudo i2cdetect -r -y 0
         print("Uwbot.Init I2C-Bus is done...")
 
-        # i2c_bus2 = busio.I2C(board.SCL_2, board.SDA_2, frequency=100000)
-        
         self.__mpu6050 = adafruit_mpu6050.MPU6050(i2c_bus, address=0x68)
         print("    Uwbot.Init Mpu6050 is done...")
 
+        #-----------------------------------------------------------------------
         ads1015_address = 0x48
-        # self.__ads1015 = ADS.ADS1015(i2c_bus1, address=ads1015_address)
         self.__ads1015 = ADS.ADS1015(i2c_bus, address=ads1015_address)
         print("    Uwbot.Init Ads1015 is done...")
 
+        #-----------------------------------------------------------------------
         self.__propeller = Propeller(i2c_bus)
         print("    Uwbot.Init Propeller is done...")
 
 
+        #-----------------------------------------------------------------------
         print("Uwbot.Creatint cameras")
         myFactory = CameraFactory()
         self.cameras = []
@@ -77,8 +79,6 @@ class UwBot():
             print("     Uwbot.Create Camera %i  is done..." %i)
 
         print("Unerwater Robot is Initialized......")
-
-
 
     def move(self, direction:Direction, speed:float) :
         '''
@@ -119,8 +119,7 @@ class UwBot():
         pass
 
     def read_room_temperature(self):
-        room_temperture = Mpu6050.get_temp()
-        return room_temperture
+        return self.__mpu6050.temperature
 
     def read_water_temperature(self):
         uart_port = serial.Serial(port= '/dev/ttyTHS1', 
@@ -179,12 +178,7 @@ class UwBot():
         percent = (1 - (ads1015_channel.voltage - 2.55) / -0.35) * 100
         return percent
 
-    def spin(self):
-        while True:
-            # voltage = UwBot.read_battery()
-            voltage = self.read_battery_voltage()
-            if voltage < 20:
-                self.__propeller.move_up(20, 0)
+
 
     def StartAllcameras(self):
         for i in range (1,6):
@@ -203,21 +197,32 @@ class UwBot():
     def FindFish(self, camera_id:int, FishName:str) -> bool:
         pass
 
-    def test(self):
-        while True:
+    def test_light(self):
+        for t in range(5):
             for i in range(6):
                 self.TurnOnLignt(i)
             print("All is on")
-            time.sleep(2)
+            time.sleep(1)
 
             for i in range(6):
                 self.TurnOffLignt(i)
             print ("All is off")
-            time.sleep(2)
+            time.sleep(1)
         
+    def StartLogger(self):
+        self.__started_logger=True
 
+    def SpinOnce(self):
+        # voltage = UwBot.read_battery()
+        voltage = self.read_battery_voltage()
+        if voltage < 20:
+            # battery is low, move up to water surface.
+            self.__propeller.move_up(20, 0)
+        else:
+            if self.__started_logger:
+                # Write data to influxDB
+                pass
 
-    
 
 if __name__ == '__main__':
 
