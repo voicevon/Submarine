@@ -1,12 +1,6 @@
 from peripheral import Peripheral, SensorsType,SensorValue
-
 from camera.single_camera import SingleCamera,CameraFactory
-
-
 import time
-
-
-
 
 class UwBot():
     def __init__(self):
@@ -82,8 +76,6 @@ class UwBot():
 
     def StartCamera(self, camera_id:int) ->None:
         self.cameras[camera_id].StartPipelineRecording()
-        # test = SingleCamera
-        # test.StartPipelineRecording()
 
     def StopCamera(self, camera_id:int) -> None:
         self.cameras[camera_id].StopPipelineRecording()
@@ -109,4 +101,7 @@ class UwBot():
 
 if __name__ == '__main__':
 
-    test = UwBot()
+    mybot = UwBot()
+    mybot.StartCamera(0)
+    time.sleep(10)
+    mybot.StartCamera(0)

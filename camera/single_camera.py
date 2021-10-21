@@ -53,37 +53,44 @@ class CameraFactory:
         pass
 
     def CreateSingleCamera(self, id:int) -> SingleCamera:
-        if id == 1:
+        if id == 0:
             command =("uridecodebin uri=rtsp://admin:123456@192.168.129.10:554/h265/ch1/main/av_stream ! "
                 "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=camera1.mkv")
             newCamera = SingleCamera(1,command)
+            return newCamera
 
-        if id == 2:
+        if id == 1:
             command =("uridecodebin uri=rtsp://admin:123456@192.168.129.20:554/h265/ch1/main/av_stream ! "
                 "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=camera2.mkv")
             newCamera = SingleCamera(2,command)
+            return newCamera
 
-        if id == 3:
+        if id == 2:
             command =("uridecodebin uri=rtsp://admin:123456@192.168.129.30:554/h265/ch1/main/av_stream ! "
                 "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=camera3.mkv")
             newCamera = SingleCamera(3,command)
+            return newCamera
 
-        if id == 4:
+        if id == 3:
             command =("uridecodebin uri=rtsp://admin:123456@192.168.129.40:554/h265/ch1/main/av_stream ! "
                 "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=camera4.mkv")
             newCamera = SingleCamera(4,command)
+            return newCamera
 
-        if id == 5:
+        if id == 4:
             command =("uridecodebin uri=rtsp://admin:123456@192.168.129.50:554/h265/ch1/main/av_stream ! "
                 "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=camera5.mkv")
             newCamera = SingleCamera(5,command)
+            return newCamera
 
-        if id == 6:
+        if id == 5:
             command =("uridecodebin uri=rtsp://admin:123456@192.168.129.60:554/h265/ch1/main/av_stream ! "
                 "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=camera6.mkv")
             newCamera = SingleCamera(6,command)
+            return newCamera
 
 
 
-
+if __name__ == '__main__':
+    myCamera = SingleCamera()
 
