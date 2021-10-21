@@ -7,7 +7,7 @@ from sensor.water_depth_sensor import WaterDepthSensor
 import adafruit_ads1x15.ads1015 as ADS                               
 from adafruit_ads1x15.analog_in import AnalogIn
 
-from output.propeller import Propeller, Direction
+from output.propeller import Propellers, Direction
 
 import serial
 from output.Lights import InitGPIO, SingleLight
@@ -22,6 +22,7 @@ class SensorsType:
     GRAVITY_X = 5
     GRAVITY_Y = 6
     GRAVITY_Z = 7
+    GRAVITY_XYZ = 101
     LIGHT_0 = 8
     LIGHT_1 = 9
     LIGHT_2 = 10
@@ -99,7 +100,7 @@ class Peripheral():
         print("    Uwbot.Init Ads1015 is done...")
 
         #-----------------------------------------------------------------------
-        self.__propeller = Propeller(i2c_bus)
+        self.__propeller = Propellers(i2c_bus)
         print("    Uwbot.Init Propeller is done...")
 
     def read_all_sensors(self):
@@ -131,11 +132,11 @@ class Peripheral():
         x,y,z = self.__mpu6050.acceleration
         return x
 
-    def read_Gavity_orientation_x (self):
+    def read_Gavity_orientation_y (self):
         x,y,z = self.__mpu6050.acceleration
         return y
 
-    def read_Gavity_orientation_x (self):
+    def read_Gavity_orientation_z (self):
         x,y,z = self.__mpu6050.acceleration
         return z
         

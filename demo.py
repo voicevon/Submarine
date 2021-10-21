@@ -1,44 +1,39 @@
-from uwbot import UwBot, Direction
+from uwbot import UwBot
+from peripheral import SensorsType
+from output.propeller import Direction
 
 
 #   sudo chmod 777 /dev/ttyTHS1
-class App:
-    def __init__(self) -> None:
-        self.mybot =  UwBot()
 
-    def Test(self):
-        result = self.mybot.read_water_temperature()
-        print("Water temperature = ", result)
 
-        result = self.mybot.read_distance_to_bottom()
-        print("Distance to water bottom = ", result)
+def Test(mybot):
+    result = mybot.ReadSensor(SensorsType.BATTERY_VOLTATE)
+    print("Battery voltage = ", result)
 
-        result = self.mybot.read_Gavity_orientation()
-        print('Gravity orientation = ', result)
+    result = mybot.ReadSensor(SensorsType.WATER_TEMPERATURE)
+    print("Water temperature = ", result)
 
-        result = self.mybot.read_battery_voltage()
-        print("Battery voltage = ", result)
+    result = mybot.ReadSensor(SensorsType.DISTANCE_TO_BOTTOM)
+    print("Distance to water bottom = ", result)
 
-        self.mybot.StartAllcameras()
-        self.mybot.StartCamera(1)
-        self.mybot.StopCamera(2)
+    result = mybot.ReadSensor(SensorsType.GRAVITY_Z)
+    print('Gravity orientation = ', result)
 
-        self.mybot.move(Direction.FORWARD,100)
-        self.mybot.__cameres.Stop(6)
+
+    mybot.StartAllcameras()
+    mybot.StartCamera(1)
+    mybot.StopCamera(2)
+
+    mybot.move(Direction.FORWARD,100)
+    mybot.__cameres.Stop(6)
     
-    def Spin(self):
-        self.mybot.StartLogger()
-        while True:
-            self.mybot.SpinOnce()
 
 
-if __name__== "__MAIN__":
-    myApp = App()
-    # myApp.Test()
-    
-    myApp.Spin()
 
 
-# C:
+mybot = UwBot()
+Test(mybot)
 
-# UwBot.StartAllcameras()
+# mybot.StartLogger()
+# while True:
+#     mybot.SpinOnce()
