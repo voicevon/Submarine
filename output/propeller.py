@@ -5,8 +5,18 @@ from adafruit_pca9685 import PCA9685
 # import board
 import busio
 
+class Direction:
+    FORWARD = 1
+    BACKWARD = 2
+    LEFT = 3
+    RIGHT = 4
+    UP = 5
+    DOWN = 6
+    TURN_LEFT = 7
+    TURN_RIGHT = 8
 
-class Propeller():
+    
+class Propellers():
     '''
     Manage PWM output
     Upper layer will never know what is PWM, channel.
@@ -18,7 +28,7 @@ class Propeller():
         pwm_controller_address = 0x40
         # i2c_bus0=(busio.I2C(board.SCL_1,board.SDA_1,frequency=400000))
         ServoKit(channels=16, i2c=i2c_bus, address=pwm_controller_address, frequency=49.5)
-
+        self.speed = [0,0,0,0,0,0]
 
     def move_forward(self, speed):
         '''

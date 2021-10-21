@@ -13,8 +13,10 @@ class SingleLight:
     def __init__(self, pin) -> None:
         self.__pin = pin
         GPIO.setup(self.__pin, GPIO.OUT, initial=GPIO.LOW)
+        self.state = 0 # 0 is off,  1 is on
         print('      SingleLight is created. on GPIO: ', pin )
 
     def TurnOnOff(self, onoff:bool) -> None:
         GPIO.output(self.__pin, onoff)
+        self.state = onoff
 

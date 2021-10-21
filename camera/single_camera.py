@@ -15,6 +15,7 @@ class SingleCamera:
         self.pipiline = []
         self.bus = [] 
         self.__CreatePipeline()
+        self.state = 0  # 0 is off , 1 is on
 
 
     def __CreatePipeline(self) -> None:
