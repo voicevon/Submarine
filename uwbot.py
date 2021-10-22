@@ -3,6 +3,7 @@ from camera.single_camera import SingleCamera,CameraFactory
 import time
 
 class UwBot():
+
     def __init__(self):
         print("Unerwater Robot is Initializing......")
 
@@ -100,7 +101,6 @@ class UwBot():
 
 
 if __name__ == '__main__':
-
     mybot = UwBot()
     mybot.StartCamera(0)
     time.sleep(10)

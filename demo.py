@@ -2,7 +2,7 @@ from uwbot import UwBot
 from peripheral import SensorsType
 from output.propeller import Direction
 
-
+#   Get permission to access UART:
 #   sudo chmod 777 /dev/ttyTHS1
 
 
@@ -19,7 +19,6 @@ def Test(mybot):
     result = mybot.ReadSensor(SensorsType.GRAVITY_Z)
     print('Gravity orientation = ', result)
 
-
     mybot.StartAllcameras()
     mybot.StartCamera(1)
     mybot.StopCamera(2)
@@ -28,12 +27,14 @@ def Test(mybot):
     mybot.__cameres.Stop(6)
     
 
-
-
-
 mybot = UwBot()
-Test(mybot)
+todemo = 'unit_test'
+# todemo = 'auto_play'
 
-# mybot.StartLogger()
-# while True:
-#     mybot.SpinOnce()
+if todemo == 'unit_test'
+    Test(mybot)
+
+if todemo == 'auto_play'
+    mybot.StartLogger()
+    while True:
+        mybot.SpinOnce()

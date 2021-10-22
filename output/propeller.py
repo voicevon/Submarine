@@ -15,7 +15,17 @@ class Direction:
     TURN_LEFT = 7
     TURN_RIGHT = 8
 
-    
+    l
+class MotorChannel:
+    TOP_XPYP = 1
+    TOP_XNYP = 2
+    TOP_XNYN = 3
+    TOP_XPYN = 4
+    BOTTOM_XPYP = 5
+    BOTTOM_XNYP = 6
+    BOTTOM_XNYN = 7
+    BOTTOM_XPYN = 8
+
 class Propellers():
     '''
     Manage PWM output
@@ -27,48 +37,56 @@ class Propellers():
         # init PCA9685
         pwm_controller_address = 0x40
         # i2c_bus0=(busio.I2C(board.SCL_1,board.SDA_1,frequency=400000))
-        ServoKit(channels=16, i2c=i2c_bus, address=pwm_controller_address, frequency=49.5)
-        self.speed = [0,0,0,0,0,0]
+        self.motors = ServoKit(channels=16, i2c=i2c_bus, address=pwm_controller_address, frequency=49.5)
+        # self.current_speed = [0,0,0,0, 0,0,0,0]
+
+    def StartAllMotors(self):
+        pass
+
+    def __move_up_down(self, speed):
+        '''
+        Turn on PWM # 1,2,3,4  at the speed
+        '''
+
+        self.my.servo[8].angle = 90
+        self.my.servo[9].angle = 90
+        self.my.servo[10].angle = 90
+        self.my.servo[11].angle = 90
+        
 
     def move_forward(self, speed):
-        '''
-        turn on PWM #7, #8 clockwise
-
-        '''
-        self.my.servo[14].angle = speed
-        self.my.servo[15].angle = speed
+        self.motors[MotorChannel.BOTTOM_XNYN].angle = speed
+        self.motors[MotorChannel.BOTTOM_XPYN].angle = speed
         
     
     def move_backward(self, speed):
+        self.motors[MotorChannel.BOTTOM_XNYP].angle = speed
+        self.motors[MotorChannel.BOTTOM_XPYP].angle = speed
+
+    # def move_left(self, speed_clockwise,speed_counterclockwise):
+    def move_left(self, speed):
         '''
-        turn on PWM #5, #6 counterclockwise
-
+        Can be 2 motors or 4 motors
         '''
-        self.my.servo[12].angle = speed
-        self.my.servo[13].angle = speed
+        # self.my.servo[15].angle = speed_clockwise
+        # self.my.servo[12].angle = speed_counterclockwise
+        self.motors[MotorChannel.BOTTOM_XPYN].angle = speed
+        self.motors[MotorChannel.BOTTOM_XNYP].angle = speed
 
-    def move_left(self, speed_clockwise,speed_counterclockwise):
+    # def move_right(self, speed_clockwise,speed_counterclockwise):
+    def move_right(self, speed):
         '''
-        turn on pwm #8 clockwise
-
-        turn on PWM #5 counterclockwise
-
+        Can be 2 motors or 4 motors
         '''
-        self.my.servo[15].angle = speed_clockwise
-        self.my.servo[12].angle = speed_counterclockwise
+        # '''
+        # turn on pwm #6 clockwise
+        # turn on PWM #7 counterclockwise
+        # '''
+        # self.my.servo[13].angle = speed_clockwise
+        # self.my.servo[14].angle = speed_counterclockwise
+        self.motors[MotorChannel.BOTTOM_XPYN].angle = speed
+        self.motors[MotorChannel.BOTTOM_XNYP].angle = speed
 
-        pass
-
-    def move_right(self, speed_clockwise,speed_counterclockwise):
-        '''
-        turn on pwm #6 clockwise
-        
-        turn on PWM #7 counterclockwise
-
-        '''
-        self.my.servo[13].angle = speed_clockwise
-        self.my.servo[14].angle = speed_counterclockwise
-        pass
     def move_up(self, speed, to_water_depth):
         '''
         turn on pwm #1, #2, #3, #4 clockwise
@@ -107,6 +125,7 @@ class Propellers():
             self.my.servo[9].angle = 90
             self.my.servo[10].angle = 90
             self.my.servo[11].angle = 90 
+    
     def turn_left(self, speed_clockwise,speed_counterclockwise):
         '''
         turn on pwm #6 clockwise
@@ -127,17 +146,6 @@ class Propellers():
         self.my.servo[12].angle = speed_clockwise
         self.my.servo[14].angle = speed_counterclockwise
     
-    def __move_up_down(self, speed):
-        '''
-        Turn on PWM # 1,2,3,4  at the speed
-        '''
-
-        self.my.servo[8].angle = 90
-        self.my.servo[9].angle = 90
-        self.my.servo[10].angle = 90
-        self.my.servo[11].angle = 90
-        
-
     def spin(self):
         '''
         This will run at a new thread. to keep the water_depth_position
