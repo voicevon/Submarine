@@ -4,7 +4,8 @@ import busio
 import time
 
 from sensor.water_depth_sensor import WaterDepthSensor
-import adafruit_ads1x15.ads1015 as ADS                               
+import adafruit_ads1x15.ads1015 as ADS    
+#   sudo pip3 install adafruit-circuitpython-ads1x15                      
 from adafruit_ads1x15.analog_in import AnalogIn
 
 from output.propeller import Propellers, Direction
@@ -13,6 +14,7 @@ import serial
 from output.Lights import InitGPIO, SingleLight
 
 import adafruit_mpu6050   # https://learn.adafruit.com/mpu6050-6-dof-accelerometer-and-gyro/python-and-circuitpython
+#   sudo pip3 install adafruit-circuitpython-mpu6050
 
 class SensorsType:
     BATTERY_VOLTATE = 1

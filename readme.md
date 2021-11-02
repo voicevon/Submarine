@@ -14,3 +14,11 @@ python3 demo.py
 * Check embedded system performance
 ` jtop`
 
+# Demo instruction
+
+```
+sudo chmod 777 /dev/ttyTHS1
+cd ~/Sumbrine
+sudo python3 demo.py
+
+```
