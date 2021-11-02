@@ -48,23 +48,58 @@ class Propellers():
         self.motors = ServoKit(channels=16, i2c=i2c_bus, address=pwm_controller_address, frequency=49.5)
         # self.current_speed = [0,0,0,0, 0,0,0,0]
 
+    def StartSingleMotor(self, channel_id:int):
+        print("   -------------------", channel_id)
+        self.motors.servo[channel_id].angle = 90
+        time.sleep(10)
+        self.TestSingleMotor(channel_id)
+    
+
+    def TestSingleMotor(self,channel_id:int):
+        print("   zzzzzzzzzzzzzzzzzzz   ", channel_id)
+        self.motors.servo[channel_id].angle = 70
+        time.sleep(10)
+        self.motors.servo[channel_id].angle = 90
+
+
     def StartAllMotors(self):
-        self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90
-        time.sleep(2)
-        self.motors.servo[MOTOR_CHANNEL.TOP_XNYP].angle = 90
-        time.sleep(2)
-        self.motors.servo[MOTOR_CHANNEL.TOP_XNYN].angle = 90
-        time.sleep(2)
-        self.motors.servo[MOTOR_CHANNEL.TOP_XPYN].angle = 90
-        time.sleep(2)
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90
-        time.sleep(2)
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = 90
-        time.sleep(2)
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90
-        time.sleep(2)
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = 90
-        time.sleep(2)
+        self.StartSingleMotor(MOTOR_CHANNEL.TOP_XPYP)
+        self.StartSingleMotor(MOTOR_CHANNEL.TOP_XNYP)
+        self.StartSingleMotor(MOTOR_CHANNEL.TOP_XNYN)
+        self.StartSingleMotor(MOTOR_CHANNEL.TOP_XPYN)
+        self.StartSingleMotor(MOTOR_CHANNEL.BOTTOM_XPYP)
+        self.StartSingleMotor(MOTOR_CHANNEL.BOTTOM_XNYP)
+        self.StartSingleMotor(MOTOR_CHANNEL.BOTTOM_XNYN)
+        self.StartSingleMotor(MOTOR_CHANNEL.BOTTOM_XPYN)
+        # self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90
+        # print('  111111111 ')
+        # time.sleep(test_delay)
+        # self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 80
+        # time.sleep(3)
+        # self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90
+
+        
+        # self.motors.servo[MOTOR_CHANNEL.TOP_XNYP].angle = 90
+        # print('  222222222222 ')
+        # time.sleep(test_delay)
+        # self.motors.servo[MOTOR_CHANNEL.TOP_XNYN].angle = 90
+        # print('  33333333333 ')
+        # time.sleep(test_delay)
+        # self.motors.servo[MOTOR_CHANNEL.TOP_XPYN].angle = 90
+        # print('  4444444444444444 ')
+        # time.sleep(test_delay)
+        # self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90
+        # print('  55555555555555 ')
+        # time.sleep(test_delay)
+        # self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = 90
+        # print('  666666666666 ')
+        # time.sleep(test_delay)
+        # self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90
+        # print('  77777777777777 ')
+        # time.sleep(test_delay)
+        # self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = 90
+        # print('  888888888 ')
+        # time.sleep(test_delay)
         print('     Motor as servo is Started.... ')
 
 
