@@ -27,7 +27,7 @@ def Test(mybot):
     mybot.move(Direction.FORWARD,100)
     mybot.__cameres.Stop(6)
     
-
+  
 
 
 
