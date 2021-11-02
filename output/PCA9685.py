@@ -1,5 +1,7 @@
 from adafruit_servokit import ServoKit
 from adafruit_pca9685 import PCA9685
+#  (Without Ladder ??)   sudo pip3 install adafruit-circuitpython-servokit
+#     (Without Ladder)  sudo apt install -y python3 git python3-pip   
 import board
 import busio
 import time
@@ -9,7 +11,6 @@ my=ServoKit(channels=16,i2c=i2c_bus0,address=text_address,frequency=49.5)
 
 t=0.0
 test_id = 2
-
 
 middle = 83.50
 offset = 0.00
@@ -40,7 +41,6 @@ while test_id == 1 :
 while  test_id ==2:
 
    ang = 90
-  
    my.servo[15].angle=ang
    print("servoo_id=15" , "angle=",ang)
    time.sleep(3)
@@ -53,10 +53,8 @@ while  test_id ==2:
       my.servo[i].angle=0    
    print("return")
    time.sleep(3)
+
 while test_id ==3:
-
-
-
    delay = 1
 
    position = middle + offset
@@ -74,9 +72,6 @@ while test_id ==3:
    time.sleep(delay)
 
 while test_id ==4:
-
-
-
    delay = 1
 
    position = middle + offset
@@ -87,6 +82,7 @@ while test_id ==4:
    offset = offset + step
    print("         ", offset,"offset = ")
    time.sleep(delay)
+
 while test_id ==5:
    delay = 1
    position = middle - offset

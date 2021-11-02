@@ -13,10 +13,10 @@ class UwBot():
         print("Uwbot.Creatint cameras")
         myFactory = CameraFactory()
         self.cameras = []
-        for i in range(6):
-            new_camera = myFactory.CreateSingleCamera(i)
-            self.cameras.append(new_camera)
-            print("     Uwbot.Create Camera %i  is done..." %i)
+        # for i in range(6):
+        #     new_camera = myFactory.CreateSingleCamera(i)
+        #     self.cameras.append(new_camera)
+        #     print("     Uwbot.Create Camera %i  is done..." %i)
 
         #-----------------------------------------------------------------------
         print("Unerwater Robot is Initialized......")
