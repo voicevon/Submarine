@@ -100,7 +100,7 @@ class Peripheral():
         print("    Uwbot.Init Ads1015 is done...")
 
         #-----------------------------------------------------------------------
-        self.__propeller = Propellers(i2c_bus)
+        self.propeller = Propellers(i2c_bus)
         print("    Uwbot.Init Propeller is done...")
 
     def read_all_sensors(self):
@@ -204,32 +204,32 @@ class Peripheral():
         now_speed_clockwise = 83.55 * ((101 - speed) / 100)
         now_speed_counterclockwise = 180 - 83.55 * ((101 - speed) / 100)
         if direction == Direction.FORWARD:
-            self.__propeller.move_forward(now_speed_clockwise)
+            self.propeller.move_forward(now_speed_clockwise)
 
         elif direction == Direction.BACKWARD:
 
-            self.__propeller.move_backward(now_speed_counterclockwise)
+            self.propeller.move_backward(now_speed_counterclockwise)
 
         elif direction == Direction.LEFT:
-            self.__propeller.move_left(now_speed_clockwise, now_speed_counterclockwise)
+            self.propeller.move_left(now_speed_clockwise, now_speed_counterclockwise)
 
         elif direction == Direction.RIGHT:
-            self.__propeller.move_right(now_speed_clockwise, now_speed_counterclockwise)
+            self.propeller.move_right(now_speed_clockwise, now_speed_counterclockwise)
 
         elif direction == Direction.UP:
             water_depth = WaterDepthSensor.read_water_depth()
-            self.__propeller.move_up(now_speed_clockwise)#, water_depth)
+            self.propeller.move_up(now_speed_clockwise)#, water_depth)
 
         elif direction == Direction.DOWN:
             water_depth = WaterDepthSensor.read_water_depth()
             print(water_depth)
-            self.__propeller.move_down(now_speed_counterclockwise, water_depth)
+            self.propeller.move_down(now_speed_counterclockwise, water_depth)
 
         elif direction == Direction.TURN_LEFT:
-            self.__propeller.turn_left(now_speed_clockwise, now_speed_counterclockwise)
+            self.propeller.turn_left(now_speed_clockwise, now_speed_counterclockwise)
 
         elif direction == Direction.TURN_RIGHT:
-            self.__propeller.turn_right(now_speed_clockwise, now_speed_counterclockwise)     
+            self.propeller.turn_right(now_speed_clockwise, now_speed_counterclockwise)     
 
 
 

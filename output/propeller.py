@@ -5,7 +5,15 @@ from adafruit_pca9685 import PCA9685
 # import board
 import busio
 
-class Direction:
+class CAMERA_POSITION:
+    FRONT = 1
+    BACK = 2
+    LEFT = 3
+    RIGHT = 4
+    TOP = 5
+    BOTTOM = 6
+
+class MOVE_DIRECTION:
     FORWARD = 1
     BACKWARD = 2
     LEFT = 3
@@ -15,15 +23,15 @@ class Direction:
     TURN_LEFT = 7
     TURN_RIGHT = 8
 
-    l
+
 class MotorChannel:
-    TOP_XPYP = 1
-    TOP_XNYP = 2
-    TOP_XNYN = 3
-    TOP_XPYN = 4
-    BOTTOM_XPYP = 5
-    BOTTOM_XNYP = 6
-    BOTTOM_XNYN = 7
+    TOP_XPYP = 5
+    TOP_XNYP = 1
+    TOP_XNYN = 2
+    TOP_XPYN = 6
+    BOTTOM_XPYP = 7
+    BOTTOM_XNYP = 3
+    BOTTOM_XNYN = 4
     BOTTOM_XPYN = 8
 
 class Propellers():
@@ -36,7 +44,6 @@ class Propellers():
     def __init__(self, i2c_bus: busio.I2C):
         # init PCA9685
         pwm_controller_address = 0x40
-        # i2c_bus0=(busio.I2C(board.SCL_1,board.SDA_1,frequency=400000))
         self.motors = ServoKit(channels=16, i2c=i2c_bus, address=pwm_controller_address, frequency=49.5)
         # self.current_speed = [0,0,0,0, 0,0,0,0]
 

@@ -6,7 +6,10 @@ from output.propeller import Direction
 #   sudo chmod 777 /dev/ttyTHS1
 
 
-def Test(mybot):
+def Test(mybot:UwBot):
+    mybot.Move(Direction.FORWARD,100)
+    # mybot.__cameres.Stop(6)
+
     result = mybot.ReadSensor(SensorsType.BATTERY_VOLTATE)
     print("Battery voltage = ", result)
 
@@ -23,8 +26,7 @@ def Test(mybot):
     mybot.StartCamera(1)
     mybot.StopCamera(2)
 
-    mybot.move(Direction.FORWARD,100)
-    mybot.__cameres.Stop(6)
+
     
   
 
@@ -34,10 +36,10 @@ mybot = UwBot()
 todemo = 'unit_test'
 # todemo = 'auto_play'
 
-if todemo == 'unit_test'
+if todemo == 'unit_test':
     Test(mybot)
 
-if todemo == 'auto_play'
+if todemo == 'auto_play':
     mybot.StartLogger()
     while True:
         mybot.SpinOnce()
