@@ -4,6 +4,7 @@ from  adafruit_servokit import ServoKit
 
 # import board
 import busio
+import time
 
 class CAMERA_POSITION:
     FRONT = 1
@@ -24,14 +25,14 @@ class MOVE_DIRECTION:
     TURN_RIGHT = 8
 
 
-class MotorChannel:
-    TOP_XPYP = 5
-    TOP_XNYP = 1
-    TOP_XNYN = 2
-    TOP_XPYN = 6
-    BOTTOM_XPYP = 7
-    BOTTOM_XNYP = 3
-    BOTTOM_XNYN = 4
+class MOTOR_CHANNEL:
+    TOP_XPYP = 11
+    TOP_XNYP = 15
+    TOP_XNYN = 14
+    TOP_XPYN = 10
+    BOTTOM_XPYP = 9
+    BOTTOM_XNYP = 13
+    BOTTOM_XNYN = 12
     BOTTOM_XPYN = 8
 
 class Propellers():
@@ -48,13 +49,29 @@ class Propellers():
         # self.current_speed = [0,0,0,0, 0,0,0,0]
 
     def StartAllMotors(self):
-        pass
+        self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90
+        time.sleep(2)
+        self.motors.servo[MOTOR_CHANNEL.TOP_XNYP].angle = 90
+        time.sleep(2)
+        self.motors.servo[MOTOR_CHANNEL.TOP_XNYN].angle = 90
+        time.sleep(2)
+        self.motors.servo[MOTOR_CHANNEL.TOP_XPYN].angle = 90
+        time.sleep(2)
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90
+        time.sleep(2)
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = 90
+        time.sleep(2)
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90
+        time.sleep(2)
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = 90
+        time.sleep(2)
+        print('     Motor as servo is Started.... ')
+
 
     def __move_up_down(self, speed):
         '''
         Turn on PWM # 1,2,3,4  at the speed
         '''
-
         self.my.servo[8].angle = 90
         self.my.servo[9].angle = 90
         self.my.servo[10].angle = 90
@@ -62,13 +79,13 @@ class Propellers():
         
 
     def move_forward(self, speed):
-        self.motors[MotorChannel.BOTTOM_XNYN].angle = speed
-        self.motors[MotorChannel.BOTTOM_XPYN].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = speed
         
     
     def move_backward(self, speed):
-        self.motors[MotorChannel.BOTTOM_XNYP].angle = speed
-        self.motors[MotorChannel.BOTTOM_XPYP].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = speed
 
     # def move_left(self, speed_clockwise,speed_counterclockwise):
     def move_left(self, speed):
@@ -77,8 +94,8 @@ class Propellers():
         '''
         # self.my.servo[15].angle = speed_clockwise
         # self.my.servo[12].angle = speed_counterclockwise
-        self.motors[MotorChannel.BOTTOM_XPYN].angle = speed
-        self.motors[MotorChannel.BOTTOM_XNYP].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = speed
 
     # def move_right(self, speed_clockwise,speed_counterclockwise):
     def move_right(self, speed):
@@ -91,8 +108,8 @@ class Propellers():
         # '''
         # self.my.servo[13].angle = speed_clockwise
         # self.my.servo[14].angle = speed_counterclockwise
-        self.motors[MotorChannel.BOTTOM_XPYN].angle = speed
-        self.motors[MotorChannel.BOTTOM_XNYP].angle = speed
+        self.motors[MOTOR_CHANNEL.BOTTOM_XPYN].angle = speed
+        self.motors[MOTOR_CHANNEL.BOTTOM_XNYP].angle = speed
 
     def move_up(self, speed, to_water_depth):
         '''

@@ -1,13 +1,13 @@
 from uwbot import UwBot
 from peripheral import SensorsType
-from output.propeller import Direction
+from output.propeller import MOVE_DIRECTION
 
 #   Get permission to access UART:
 #   sudo chmod 777 /dev/ttyTHS1
 
 
 def Test(mybot:UwBot):
-    mybot.Move(Direction.FORWARD,100)
+    mybot.Move(MOVE_DIRECTION.FORWARD,100)
     # mybot.__cameres.Stop(6)
 
     result = mybot.ReadSensor(SensorsType.BATTERY_VOLTATE)

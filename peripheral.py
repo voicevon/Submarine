@@ -8,7 +8,7 @@ import adafruit_ads1x15.ads1015 as ADS
 #   sudo pip3 install adafruit-circuitpython-ads1x15                      
 from adafruit_ads1x15.analog_in import AnalogIn
 
-from output.propeller import Propellers, Direction
+from output.propeller import Propellers, MOVE_DIRECTION
 
 import serial
 from output.Lights import InitGPIO, SingleLight
@@ -73,25 +73,15 @@ class Peripheral():
 
     def __init__(self) -> None:
         #-----------------------------------------------------------------------
-        self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', baudrate=9600)
-        self.__uart_port.timeout = 3
-        if self.__uart_port.isOpen():
-            print("Uwbot.Init UART is done...")
-        else:
-            print("  !!!!    !!!!  !!!!   !!!!  Uwbot.Init UART is Failed...")
-        #-----------------------------------------------------------------------
-        self.__lights = []
-        light_pins = [35,33,31,29,19,15]
-        InitGPIO()
-        for i in range(6):
-            new_light = SingleLight(light_pins[i])
-            self.__lights.append(new_light)
-        print("Uwbot.Init Lights is done...")
-        #-----------------------------------------------------------------------
         i2c_bus = busio.I2C(board.SCL_1, board.SDA_1, frequency=100000)
         # List I2C device:       
         #   sudo i2cdetect -r -y 0
-        print("Uwbot.Init I2C-Bus is done...")
+        print("Uwbot.Init I2C-Bus is done...")   
+
+        #-----------------------------------------------------------------------
+        self.propeller = Propellers(i2c_bus)
+        self.propeller.StartAllMotors()
+        print("    Uwbot.Init Propeller is done...")
 
         self.__mpu6050 = adafruit_mpu6050.MPU6050(i2c_bus, address=0x68)
         print("    Uwbot.Init Mpu6050 is done...")
@@ -102,8 +92,22 @@ class Peripheral():
         print("    Uwbot.Init Ads1015 is done...")
 
         #-----------------------------------------------------------------------
-        self.propeller = Propellers(i2c_bus)
-        print("    Uwbot.Init Propeller is done...")
+        self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', baudrate=9600)
+        self.__uart_port.timeout = 3
+        if self.__uart_port.isOpen():
+            print("Uwbot.Init UART is done...")
+        else:
+            print("  !!!!    !!!!  !!!!   !!!!  Uwbot.Init UART is Failed...")
+
+        #-----------------------------------------------------------------------
+        self.__lights = []
+        light_pins = [35,33,31,29,19,15]
+        InitGPIO()
+        for i in range(6):
+            new_light = SingleLight(light_pins[i])
+            self.__lights.append(new_light)
+        print("Uwbot.Init Lights is done...")
+
 
     def read_all_sensors(self):
         pass
@@ -198,39 +202,39 @@ class Peripheral():
             time.sleep(1)
 
 
-    def move(self, direction:Direction, speed:float) :
+    def move(self, direction:MOVE_DIRECTION, speed:float) :
         '''
         direction list = ['FORWARD', 'BACKWARD']
         speed must in range [0,100]
         '''
         now_speed_clockwise = 83.55 * ((101 - speed) / 100)
         now_speed_counterclockwise = 180 - 83.55 * ((101 - speed) / 100)
-        if direction == Direction.FORWARD:
+        if direction == MOVE_DIRECTION.FORWARD:
             self.propeller.move_forward(now_speed_clockwise)
 
-        elif direction == Direction.BACKWARD:
+        elif direction == MOVE_DIRECTION.BACKWARD:
 
             self.propeller.move_backward(now_speed_counterclockwise)
 
-        elif direction == Direction.LEFT:
+        elif direction == MOVE_DIRECTION.LEFT:
             self.propeller.move_left(now_speed_clockwise, now_speed_counterclockwise)
 
-        elif direction == Direction.RIGHT:
+        elif direction == MOVE_DIRECTION.RIGHT:
             self.propeller.move_right(now_speed_clockwise, now_speed_counterclockwise)
 
-        elif direction == Direction.UP:
+        elif direction == MOVE_DIRECTION.UP:
             water_depth = WaterDepthSensor.read_water_depth()
             self.propeller.move_up(now_speed_clockwise)#, water_depth)
 
-        elif direction == Direction.DOWN:
+        elif direction == MOVE_DIRECTION.DOWN:
             water_depth = WaterDepthSensor.read_water_depth()
             print(water_depth)
             self.propeller.move_down(now_speed_counterclockwise, water_depth)
 
-        elif direction == Direction.TURN_LEFT:
+        elif direction == MOVE_DIRECTION.TURN_LEFT:
             self.propeller.turn_left(now_speed_clockwise, now_speed_counterclockwise)
 
-        elif direction == Direction.TURN_RIGHT:
+        elif direction == MOVE_DIRECTION.TURN_RIGHT:
             self.propeller.turn_right(now_speed_clockwise, now_speed_counterclockwise)     
 
 
