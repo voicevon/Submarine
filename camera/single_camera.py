@@ -92,5 +92,8 @@ class CameraFactory:
 
 
 if __name__ == '__main__':
-    myCamera = SingleCamera()
+    myFactorty = CameraFactory()
+
+    myCamera = myFactorty.CreateSingleCamera(0)
+    myCamera.StartPipelineRecording()
 

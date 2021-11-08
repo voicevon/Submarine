@@ -7,6 +7,12 @@ from output.propeller import MOVE_DIRECTION
 
 
 def Test(mybot:UwBot):
+    mybot.StartAllcameras()
+    mybot.StartCamera(1)
+    mybot.StopCamera(2)
+
+
+    
     mybot.Move(MOVE_DIRECTION.FORWARD,100)
     # mybot.__cameres.Stop(6)
 
@@ -22,9 +28,7 @@ def Test(mybot:UwBot):
     result = mybot.ReadSensor(SensorsType.GRAVITY_Z)
     print('Gravity orientation = ', result)
 
-    mybot.StartAllcameras()
-    mybot.StartCamera(1)
-    mybot.StopCamera(2)
+
 
 
     
