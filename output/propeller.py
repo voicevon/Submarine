@@ -51,11 +51,11 @@ class Propellers():
     def StartSingleMotor(self, channel_id:int):
         print("   -------------------", channel_id)
         self.motors.servo[channel_id].angle = 90
-        time.sleep(10)
-        self.TestSingleMotor(channel_id)
+        # self.TestSingleMotor(channel_id)
     
 
     def TestSingleMotor(self,channel_id:int):
+        time.sleep(10)
         print("   zzzzzzzzzzzzzzzzzzz   ", channel_id)
         self.motors.servo[channel_id].angle = 70
         time.sleep(10)
@@ -71,6 +71,7 @@ class Propellers():
         self.StartSingleMotor(MOTOR_CHANNEL.BOTTOM_XNYP)
         self.StartSingleMotor(MOTOR_CHANNEL.BOTTOM_XNYN)
         self.StartSingleMotor(MOTOR_CHANNEL.BOTTOM_XPYN)
+        time.sleep(1)
         # self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90
         # print('  111111111 ')
         # time.sleep(test_delay)

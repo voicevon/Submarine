@@ -15,10 +15,10 @@ class UwBot():
         print("Uwbot.Creatint cameras")
         myFactory = CameraFactory()
         self.cameras = []
-        for i in range(6):
-            new_camera = myFactory.CreateSingleCamera(i)
-            self.cameras.append(new_camera)
-            print("     Uwbot.Create Camera %i  is done..." %i)
+        # for i in range(6):
+        #     new_camera = myFactory.CreateSingleCamera(i)
+        #     self.cameras.append(new_camera)
+        #     print("     Uwbot.Create Camera %i  is done..." %i)
 
         #-----------------------------------------------------------------------
         print("Unerwater Robot is Initialized......")
@@ -26,6 +26,8 @@ class UwBot():
     def ReadSensor(self, sensor:SensorsType):
         if sensor == SensorsType.BATTERY_VOLTATE:
             return self.peripheral.read_battery_voltage()
+        elif sensor == SensorsType.WATER_TEMPERATURE:
+            return self.peripheral.read_water_temperature()
         elif sensor == SensorsType.DISTANCE_TO_BOTTOM:
             return self.peripheral.read_distance_to_bottom()
         elif sensor == SensorsType.CAMERA_0:
@@ -46,6 +48,8 @@ class UwBot():
             return self.peripheral.read_Gavity_orientation_y()
         elif sensor == SensorsType.GRAVITY_Z:
             return self.peripheral.read_Gavity_orientation_z()
+        elif sensor == SensorsType.ROOM_TEMPERATURE:
+            return self.peripheral.read_room_temperature()
         elif sensor == SensorsType.LIGHT_0:
             return self.peripheral.__lights[0].state
         elif sensor == SensorsType.LIGHT_1:
