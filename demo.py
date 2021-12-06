@@ -40,10 +40,6 @@ def TestLight():
 
 from output.propeller import MOTOR_CHANNEL
 
-# def __Start_and_Test_Single_Motor(channel):
-#     mybot.peripheral.propeller.StartSingleMotor(channel)
-#     mybot.peripheral.propeller.TestSingleMotor(channel)
-  
 def TestPropeller():
     print("Testing TOP_XPYP")
     mybot.peripheral.propeller.TestSingleMotor(MOTOR_CHANNEL.TOP_XPYP)
@@ -62,8 +58,6 @@ def TestPropeller():
     print("Testing BOTTOM_XPYN")
     mybot.peripheral.propeller.TestSingleMotor(MOTOR_CHANNEL.BOTTOM_XPYN)
 
-    # __Start_and_Test_Single_Motor(MOTOR_CHANNEL.TOP_XPYP)
-    # __Start_and_Test_Single_Motor(MOTOR_CHANNEL.TOP_XNYP)
     
 
 
