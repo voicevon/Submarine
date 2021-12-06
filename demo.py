@@ -5,13 +5,12 @@ from output.propeller import MOVE_DIRECTION
 #   Get permission to access UART:
 #   sudo chmod 777 /dev/ttyTHS1
 
+mybot = UwBot()
 
-def Test(mybot:UwBot):
+def TestSensor():
     # mybot.StartAllcameras()
     # mybot.StartCamera(1)
     # mybot.StopCamera(2)
-
-
     
     # mybot.Move(MOVE_DIRECTION.FORWARD,100)
     # mybot.__cameres.Stop(6)
@@ -35,21 +34,24 @@ def Test(mybot:UwBot):
     print('Gravity orientation = ', result)
 
 
+def TestLight():
+    pass
 
+def TestPropeller():
+    pass
 
     
   
 
 
 
-mybot = UwBot()
-todemo = 'unit_test'
-# todemo = 'auto_play'
+demo = {"TestSensor": TestSensor, "TestLights":TestLight, "TestProperllers": TestPropeller }
+f = demo["TestSensor"]
+f()
 
-if todemo == 'unit_test':
-    Test(mybot)
 
-if todemo == 'auto_play':
+
+if False:
     mybot.StartLogger()
     while True:
         mybot.SpinOnce()
