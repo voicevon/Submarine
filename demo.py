@@ -39,8 +39,9 @@ def TestLight():
 
 
 from output.propeller import MOTOR_CHANNEL
+import time
 
-def TestPropeller():
+def TestEachPropeller():
     print("Testing TOP_XPYP")
     mybot.peripheral.propeller.TestSingleMotor(MOTOR_CHANNEL.TOP_XPYP)
     print("Testing TOP_XNYP")
@@ -58,17 +59,72 @@ def TestPropeller():
     print("Testing BOTTOM_XPYN")
     mybot.peripheral.propeller.TestSingleMotor(MOTOR_CHANNEL.BOTTOM_XPYN)
 
-    
+
+def TestCombineProperller():
+    obj = mybot.peripheral.propeller
+    test_speed = 40
+    print("Move forward 10 second..")
+    obj.move_forward(test_speed)
+    time.sleep(10)
+    obj.StopAllMotors()
+    time.sleep(10)
 
 
+    print("Move backward 10 second..")
+    obj.move_backward(test_speed)
+    time.sleep(10)
+    obj.StopAllMotors()
+    time.sleep(10)
+
+
+    print("Move move_up 10 second..")
+    obj.move_up(test_speed,1)
+    time.sleep(10)
+    obj.StopAllMotors()
+    time.sleep(10)
+
+    print("Move move_down 10 second..")
+    obj.move_down(test_speed,1)
+    time.sleep(10)
+    obj.StopAllMotors()
+    time.sleep(10)
+
+    print("Move move_left 10 second..")
+    obj.move_left(test_speed)
+    time.sleep(10)
+    obj.StopAllMotors()
+    time.sleep(10)
     
+    print("Move move_right 10 second..")
+    obj.move_right(test_speed)
+    time.sleep(10)
+    obj.StopAllMotors()
+    time.sleep(10)
+
+    
+    print("Move turn_left 10 second..")
+    obj.turn_left(test_speed)
+    time.sleep(10)
+    obj.StopAllMotors()
+    time.sleep(10)
+
+    
+    print("Move turn_right 10 second..")
+    obj.turn_right(test_speed)
+    time.sleep(10)
+    obj.StopAllMotors()
+    time.sleep(10)
+
   
 
 
 
-demo = {"TestSensor": TestSensor, "TestLights":TestLight, "TestProperllers": TestPropeller }
+demo = {"TestSensor":TestSensor, "TestLights":TestLight, 
+        "TestEachPropeller": TestEachPropeller,
+        "TestCombineProperller":TestCombineProperller,
+         }
 # f = demo["TestSensor"]
-doDemo = demo["TestProperllers"]
+doDemo = demo["TestCombineProperller"]
 doDemo()
 
 

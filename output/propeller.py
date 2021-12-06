@@ -73,36 +73,10 @@ class Propellers():
         self.StartSingleMotor(MOTOR_CHANNEL.BOTTOM_XNYN)
         self.StartSingleMotor(MOTOR_CHANNEL.BOTTOM_XPYN)
         time.sleep(1)
-        # self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90
-        # print('  111111111 ')
-        # time.sleep(test_delay)
-        # self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 80
-        # time.sleep(3)
-        # self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90
-
-        
-        # self.motors.servo[MOTOR_CHANNEL.TOP_XNYP].angle = 90
-        # print('  222222222222 ')
-        # time.sleep(test_delay)
-        # self.motors.servo[MOTOR_CHANNEL.TOP_XNYN].angle = 90
-        # print('  33333333333 ')
-        # time.sleep(test_delay)
-        # self.motors.servo[MOTOR_CHANNEL.TOP_XPYN].angle = 90
-        # print('  4444444444444444 ')
-        # time.sleep(test_delay)
-        # self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90
-        # print('  55555555555555 ')
-        # time.sleep(test_delay)
-        # self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = 90
-        # print('  666666666666 ')
-        # time.sleep(test_delay)
-        # self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90
-        # print('  77777777777777 ')
-        # time.sleep(test_delay)
-        # self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = 90
-        # print('  888888888 ')
-        # time.sleep(test_delay)
         print('     Motor as servo is Started.... ')
+
+    def StopAllMotors(self):
+        self.StartAllMotors()
 
 
     def __move_up_down(self, speed):
@@ -116,96 +90,49 @@ class Propellers():
         
 
     def move_forward(self, speed):
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = speed
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90 - speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = 90 - speed
         
     
     def move_backward(self, speed):
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = speed
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = 90 + speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90 + speed
 
     # def move_left(self, speed_clockwise,speed_counterclockwise):
     def move_left(self, speed):
         '''
-        Can be 2 motors or 4 motors
+        Can be 2 motors or 4 motors, We choose 2 motors.
         '''
-        # self.my.servo[15].angle = speed_clockwise
-        # self.my.servo[12].angle = speed_counterclockwise
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = speed
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = 90 + speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90 - speed
 
-    # def move_right(self, speed_clockwise,speed_counterclockwise):
     def move_right(self, speed):
         '''
         Can be 2 motors or 4 motors
         '''
-        # '''
-        # turn on pwm #6 clockwise
-        # turn on PWM #7 counterclockwise
-        # '''
-        # self.my.servo[13].angle = speed_clockwise
-        # self.my.servo[14].angle = speed_counterclockwise
-        self.motors[MOTOR_CHANNEL.BOTTOM_XPYN].angle = speed
-        self.motors[MOTOR_CHANNEL.BOTTOM_XNYP].angle = speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90 + speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = 90 - speed
 
     def move_up(self, speed, to_water_depth):
-        '''
-        turn on pwm #1, #2, #3, #4 clockwise
+        self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90 + speed
+        self.motors.servo[MOTOR_CHANNEL.TOP_XNYP].angle = 90 + speed
+        self.motors.servo[MOTOR_CHANNEL.TOP_XNYN].angle = 90 + speed
+        self.motors.servo[MOTOR_CHANNEL.TOP_XPYN].angle = 90 + speed
 
-        move up to a certain depth
-
-        '''
-        ServoKit.servo[8].angle = speed
-        ServoKit.servo[9].angle = speed
-        ServoKit.servo[10].angle = speed
-        ServoKit.servo[11].angle = speed
-
-        '''
-        self.my.servo[8].angle = speed
-        self.my.servo[9].angle = speed
-        self.my.servo[10].angle = speed
-        self.my.servo[11].angle = speed
-
-        '''
-       
-        self.__target_water_depth = to_water_depth
-        print(to_water_depth)
 
     def move_down(self, speed ,to_water_depth):
-        '''
-        turn on pwm #1, #2, #3, #4 counterclockwise
-
-        '''
-        self.my.servo[8].angle = speed
-        self.my.servo[9].angle = speed
-        self.my.servo[10].angle = speed
-        self.my.servo[11].angle = speed
-
-        if self.__target_water_depth <= to_water_depth :
-            self.my.servo[8].angle = 90
-            self.my.servo[9].angle = 90
-            self.my.servo[10].angle = 90
-            self.my.servo[11].angle = 90 
+        self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90 - speed
+        self.motors.servo[MOTOR_CHANNEL.TOP_XNYP].angle = 90 - speed
+        self.motors.servo[MOTOR_CHANNEL.TOP_XNYN].angle = 90 - speed
+        self.motors.servo[MOTOR_CHANNEL.TOP_XPYN].angle = 90 - speed
     
-    def turn_left(self, speed_clockwise,speed_counterclockwise):
-        '''
-        turn on pwm #6 clockwise
-        
-        turn on PWM #8 counterclockwise
+    def turn_left(self, speed:int):
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90 - speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90 + speed
 
-        '''
-        self.my.servo[13].angle = speed_clockwise
-        self.my.servo[15].angle = speed_counterclockwise
-        
-    def turn_right(self,speed_clockwise,speed_counterclockwise):
-        '''
-        turn on pwm #5 clockwise
-        
-        turn on PWM #7 counterclockwise
-
-        '''
-        self.my.servo[12].angle = speed_clockwise
-        self.my.servo[14].angle = speed_counterclockwise
+    def turn_right(self,speed:int) -> None:
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90 + speed
+        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90 - speed
     
     def spin(self):
         '''
