@@ -17,7 +17,7 @@ import adafruit_mpu6050   # https://learn.adafruit.com/mpu6050-6-dof-acceleromet
 #   sudo pip3 install adafruit-circuitpython-mpu6050
 
 class SensorsType:
-    BATTERY_VOLTATE = 1
+    BATTERY_PERCENT = 1    # (100:12.6V, 0:10.9V)
     WATER_TEMPERATURE = 2
     WATER_DEPTH = 3
     ROOM_TEMPERATURE = 4

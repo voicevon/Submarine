@@ -24,7 +24,7 @@ class UwBot():
         print("Unerwater Robot is Initialized......")
 
     def ReadSensor(self, sensor:SensorsType):
-        if sensor == SensorsType.BATTERY_VOLTATE:
+        if sensor == SensorsType.BATTERY_PERCENT:
             return self.peripheral.read_battery_voltage()
         elif sensor == SensorsType.WATER_TEMPERATURE:
             return self.peripheral.read_water_temperature()

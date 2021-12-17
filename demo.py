@@ -15,8 +15,7 @@ def TestSensor():
     # mybot.Move(MOVE_DIRECTION.FORWARD,100)
     # mybot.__cameres.Stop(6)
 
-    result = mybot.ReadSensor(SensorsType.BATTERY_VOLTATE)
-    print("Battery voltage = ", result)
+
 
     while True:
         print('  ------------------------  ')
@@ -28,6 +27,9 @@ def TestSensor():
 
         result = mybot.ReadSensor(SensorsType.ROOM_TEMPERATURE)
         print("Room temperature = ", result)
+        
+        result = mybot.ReadSensor(SensorsType.BATTERY_PERCENT)
+        print("Battery voltage = ", result)
 
 
     result = mybot.ReadSensor(SensorsType.GRAVITY_Z)
@@ -119,12 +121,13 @@ def TestCombineProperller():
 
 
 
-demo = {"TestSensor":TestSensor, "TestLights":TestLight, 
+demo = {"TestSensor":TestSensor,
+        "TestLights":TestLight, 
         "TestEachPropeller": TestEachPropeller,
         "TestCombineProperller":TestCombineProperller,
          }
-# f = demo["TestSensor"]
-doDemo = demo["TestCombineProperller"]
+doDemo = demo["TestSensor"]
+# doDemo = demo["TestCombineProperller"]
 doDemo()
 
 
