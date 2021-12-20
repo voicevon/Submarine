@@ -15,21 +15,23 @@ def TestSensor():
     # mybot.Move(MOVE_DIRECTION.FORWARD,100)
     # mybot.__cameres.Stop(6)
 
-
-
     while True:
-        print('  ------------------------  ')
-        result = mybot.ReadSensor(SensorsType.WATER_TEMPERATURE)
-        print("Water temperature = ", result)
+        # print('  ------------------------  ')
+        # result = mybot.ReadSensor(SensorsType.WATER_TEMPERATURE)
+        # print("Water temperature = ", result)
 
-        result = mybot.ReadSensor(SensorsType.DISTANCE_TO_BOTTOM)
-        print("Distance to water bottom = ", result)
+        # result = mybot.ReadSensor(SensorsType.DISTANCE_TO_BOTTOM)
+        # print("Distance to water bottom = ", result)
 
-        result = mybot.ReadSensor(SensorsType.ROOM_TEMPERATURE)
-        print("Room temperature = ", result)
+        # result = mybot.ReadSensor(SensorsType.ROOM_TEMPERATURE)
+        # print("Room temperature = ", result)
         
-        result = mybot.ReadSensor(SensorsType.BATTERY_PERCENT)
-        print("Battery voltage = ", result)
+        # result = mybot.ReadSensor(SensorsType.BATTERY_PERCENT)
+        # print("Battery voltage = ", result)
+
+        result = mybot.ReadSensor(SensorsType.WATER_DEPTH)
+        print("WaterDepth = ", result)
+
 
 
     result = mybot.ReadSensor(SensorsType.GRAVITY_Z)

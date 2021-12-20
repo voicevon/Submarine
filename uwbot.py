@@ -25,7 +25,9 @@ class UwBot():
 
     def ReadSensor(self, sensor:SensorsType):
         if sensor == SensorsType.BATTERY_PERCENT:
-            return self.peripheral.read_battery_voltage()
+            return self.peripheral.read_battery_percent()
+        elif sensor == SensorsType.WATER_DEPTH:
+            return self.peripheral.read_water_depth()
         elif sensor == SensorsType.WATER_TEMPERATURE:
             return self.peripheral.read_water_temperature()
         elif sensor == SensorsType.DISTANCE_TO_BOTTOM:

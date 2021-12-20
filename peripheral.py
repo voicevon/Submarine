@@ -109,6 +109,8 @@ class Peripheral():
             self.__lights.append(new_light)
         print("Uwbot.Init Lights is done...")
 
+        self.water_depth_log=[]
+
 
     def read_all_sensors(self):
         pass
@@ -179,11 +181,21 @@ class Peripheral():
                 return temperature
 
     def read_water_depth(self):
-        pass
-
-    def read_battery_voltage(self):
         '''
-        range is [0,100]
+        unit is meter
+        '''
+        ads1015_channel = AnalogIn(self.__ads1015, ADS.P0) 
+        depth = 0.0003206 * ads1015_channel.value - 1.293
+        self.water_depth_log.append(depth)
+        if self.water_depth_log.__len__() >=100:
+            self.water_depth_log.pop(0)
+        
+        return sum(self.water_depth_log) / len(self.water_depth_log)
+
+
+    def read_battery_percent(self):
+        '''
+        range is [0:10.9V, 100:12.6V], 
         '''
 
         ads1015_channel = AnalogIn(self.__ads1015, ADS.P1) 
