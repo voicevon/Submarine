@@ -19,16 +19,16 @@
 
 import sys
 # sys.path.append('../')
-import pgi
-pgi.install_as_gi()
+import gi
+# pgi.install_as_gi()
 # from gi.repository import GLib, Gio
 # import gi
 
 print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
 import configparser
-pgi.require_version('Gst', '1.0')
-from pgi.repository import GObject, Gst
-from pgi.repository import GLib
+gi.require_version('Gst', '1.0')
+from gi.repository import GObject, Gst
+from gi.repository import GLib
 from ctypes import *
 import time
 import sys
@@ -38,7 +38,8 @@ from common.is_aarch_64 import is_aarch64
 from common.bus_call import bus_call
 from common.FPS import GETFPS
 
-from bindings.build.build.lib import pyds
+# from bindings.build.build.lib import pyds
+import pyds
 
 fps_streams={}
 
@@ -275,7 +276,7 @@ def main(args):
     streammux.set_property('height', 1080)
     streammux.set_property('batch-size', number_sources)
     streammux.set_property('batched-push-timeout', 4000000)
-    pgie.set_property('config-file-path', "dstest3_pgie_config.txt")
+    pgie.set_property('config-file-path', "pgie_config.txt")
     pgie_batch_size=pgie.get_property("batch-size")
     if(pgie_batch_size != number_sources):
         print("WARNING: Overriding infer-config batch-size",pgie_batch_size," with number of sources ", number_sources," \n")
