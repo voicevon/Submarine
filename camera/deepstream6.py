@@ -20,11 +20,6 @@
 import sys
 # sys.path.append('../')
 import gi
-# pgi.install_as_gi()
-# from gi.repository import GLib, Gio
-# import gi
-
-print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
 import configparser
 gi.require_version('Gst', '1.0')
 from gi.repository import GObject, Gst
@@ -38,7 +33,6 @@ from common.is_aarch_64 import is_aarch64
 from common.bus_call import bus_call
 from common.FPS import GETFPS
 
-# from bindings.build.build.lib import pyds
 import pyds
 
 fps_streams={}
@@ -212,9 +206,14 @@ def main(args):
         sys.stderr.write(" Unable to create NvStreamMux \n")
 
     pipeline.add(streammux)
+
+    uri_names = []
+    uri_names.append("rtsp://192.168.1.82:554/user=admin&password=&channel=1&stream=0")
+    uri_names.append("rtsp://192.168.1.84:554/user=admin&password=&channel=1&stream=0")
     for i in range(number_sources):
         print("Creating source_bin ",i," \n ")
-        uri_name=args[i+1]
+        #uri_name=args[i+1]
+        uri_name = uri_names[i]
         if uri_name.find("rtsp://") == 0 :
             is_live = True
         source_bin=create_source_bin(i, uri_name)
@@ -265,6 +264,9 @@ def main(args):
 
     print("Creating EGLSink \n")
     sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
+    filesink = Gst.ElementFactory.make("filesink","sink")
+    filesink.set_property("location", "test.mp4")
+
     if not sink:
         sys.stderr.write(" Unable to create egl sink \n")
 
