@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+
+# python3 test.py rtsp://11.22.33.44 rtsp://33.45.67.8 rtsp://33.45.67.8 rtsp://33.45.67.8 rtsp://33.45.67.8 rtsp://33.45.67.8
+
 import sys
 import gi
 import configparser
@@ -168,8 +171,14 @@ def main(args):
         fps_streams["stream{0}".format(i)]=GETFPS(i)
         print (fps_streams)
     # number_sources=len(args)-1
-    number_sources = 2
-
+    number_sources = 6
+    uri_names = []
+    uri_names.append("rtsp://192.168.1.81:554/user=admin&password=&channel=1&stream=0")
+    uri_names.append("rtsp://192.168.1.82:554/user=admin&password=&channel=1&stream=0")
+    uri_names.append("rtsp://192.168.1.83:554/user=admin&password=&channel=1&stream=0")
+    uri_names.append("rtsp://192.168.1.84:554/user=admin&password=&channel=1&stream=0")
+    uri_names.append("rtsp://192.168.1.85:554/user=admin&password=&channel=1&stream=0")
+    uri_names.append("rtsp://192.168.1.86:554/user=admin&password=&channel=1&stream=0")
     # Standard GStreamer initialization
     GObject.threads_init()
     Gst.init(None)
@@ -195,9 +204,7 @@ def main(args):
 
     pipeline.add(streammux)
 
-    uri_names = []
-    uri_names.append("rtsp://192.168.1.82:554/user=admin&password=&channel=1&stream=0")
-    uri_names.append("rtsp://192.168.1.84:554/user=admin&password=&channel=1&stream=0")
+
     for i in range(number_sources):
         print("Creating source_bin ",i," \n ")
         uri_name = uri_names[i]
@@ -259,11 +266,11 @@ def main(args):
     tiler.set_property("height", TILED_OUTPUT_HEIGHT)
     sink.set_property("qos",0)
 
-    encoder = Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
-    encoder.set_property('bitrate', bitrate)
-    encoder.set_property('preset-level', 1)
-    encoder.set_property('insert-sps-pps', 1)
-    encoder.set_property('bufapi-version', 1)
+    # encoder = Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
+    # encoder.set_property('bitrate', bitrate)
+    # encoder.set_property('preset-level', 1)
+    # encoder.set_property('insert-sps-pps', 1)
+    # encoder.set_property('bufapi-version', 1)
 
     print("Adding elements to Pipeline \n")
     # pipeline.add(pgie)
