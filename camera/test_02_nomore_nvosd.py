@@ -259,12 +259,6 @@ def main(args):
     tiler.set_property("height", TILED_OUTPUT_HEIGHT)
     sink.set_property("qos",0)
 
-    encoder = Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
-    encoder.set_property('bitrate', bitrate)
-    encoder.set_property('preset-level', 1)
-    encoder.set_property('insert-sps-pps', 1)
-    encoder.set_property('bufapi-version', 1)
-
     print("Adding elements to Pipeline \n")
     # pipeline.add(pgie)
     pipeline.add(tiler)

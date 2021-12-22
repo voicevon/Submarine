@@ -188,10 +188,6 @@ def main(args):
     streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
     if not streammux:
         sys.stderr.write(" Unable to create NvStreamMux \n")
-    streammux.set_property('width', 1920)
-    streammux.set_property('height', 1080)
-    streammux.set_property('batch-size', number_sources)
-    streammux.set_property('batched-push-timeout', 4000000)
 
     pipeline.add(streammux)
 
@@ -228,11 +224,17 @@ def main(args):
     nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
     if not nvvidconv:
         sys.stderr.write(" Unable to create nvvidconv \n")
-
-    print("Creating transform \n ")
-    transform=Gst.ElementFactory.make("nvegltransform", "nvegl-transform")
-    if not transform:
-        sys.stderr.write(" Unable to create transform \n")
+    print("Creating nvosd \n ")
+    nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
+    if not nvosd:
+        sys.stderr.write(" Unable to create nvosd \n")
+    nvosd.set_property('process-mode',OSD_PROCESS_MODE)
+    nvosd.set_property('display-text',OSD_DISPLAY_TEXT)
+    if(is_aarch64()):
+        print("Creating transform \n ")
+        transform=Gst.ElementFactory.make("nvegltransform", "nvegl-transform")
+        if not transform:
+            sys.stderr.write(" Unable to create transform \n")
 
     print("Creating EGLSink \n")
     sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
@@ -246,6 +248,10 @@ def main(args):
         print("Atleast one of the sources is live")
         streammux.set_property('live-source', 1)
 
+    streammux.set_property('width', 1920)
+    streammux.set_property('height', 1080)
+    streammux.set_property('batch-size', number_sources)
+    streammux.set_property('batched-push-timeout', 4000000)
     # pgie.set_property('config-file-path', "pgie_config.txt")
     # pgie_batch_size=pgie.get_property("batch-size")
     # if(pgie_batch_size != number_sources):
@@ -259,26 +265,29 @@ def main(args):
     tiler.set_property("height", TILED_OUTPUT_HEIGHT)
     sink.set_property("qos",0)
 
-    encoder = Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
-    encoder.set_property('bitrate', bitrate)
-    encoder.set_property('preset-level', 1)
-    encoder.set_property('insert-sps-pps', 1)
-    encoder.set_property('bufapi-version', 1)
-
     print("Adding elements to Pipeline \n")
     # pipeline.add(pgie)
     pipeline.add(tiler)
     pipeline.add(nvvidconv)
-    pipeline.add(transform)
+    pipeline.add(nvosd)
+    if is_aarch64():
+        pipeline.add(transform)
     pipeline.add(sink)
     # pipeline.add(filesink)
 
     print("Linking elements in the Pipeline \n")
+    # streammux.link(pgie)
+    # pgie.link(tiler)
     streammux.link(tiler)
     tiler.link(nvvidconv)
-    nvvidconv.link(transform)
-    transform.link(sink)
-
+    nvvidconv.link(nvosd)
+    if is_aarch64():
+        nvosd.link(transform)
+        transform.link(sink)
+        # transform.link(filesink)
+    else:
+        print("Not aarch64.................................\n\n\n")
+        nvosd.link(sink)
 
     # create an event loop and feed gstreamer bus mesages to it
     loop = GObject.MainLoop()
