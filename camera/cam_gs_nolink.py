@@ -36,12 +36,11 @@ def gst_cam1(self):
 
    
     bus_1 = [] * 10
-
     pipeline_1 = [] 
 
     print("Creating piplinecam1")
 
-    command = ("uridecodebin uri=rtsp://admin:123456@192.168.129.10:554/h265/ch1/main/av_stream ! "
+    command = ("uridecodebin uri=rtsp://admin:a@192.168.1.81:554 ! "
             "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=cam1.mkv")
 
 
@@ -221,24 +220,24 @@ def gst_cam6(self):
 if __name__ == '__main__':
     cam_1 = threading.Thread(target = gst_cam1,args = ("cam1_record",))
 
-    cam_2 = threading.Thread(target = gst_cam2,args = ("cam2_record",))
+    # cam_2 = threading.Thread(target = gst_cam2,args = ("cam2_record",))
 
-    cam_3 = threading.Thread(target = gst_cam3,args = ("cam3_record",))
+    # cam_3 = threading.Thread(target = gst_cam3,args = ("cam3_record",))
 
-    cam_4 = threading.Thread(target = gst_cam4,args = ("cam4_record",))
+    # cam_4 = threading.Thread(target = gst_cam4,args = ("cam4_record",))
 
-    cam_5 = threading.Thread(target = gst_cam5,args = ("cam5_record",))
+    # cam_5 = threading.Thread(target = gst_cam5,args = ("cam5_record",))
 
-    cam_6 = threading.Thread(target = gst_cam6,args = ("cam6_record",))
+    # cam_6 = threading.Thread(target = gst_cam6,args = ("cam6_record",))
 
     cam_1.start()
 
-    cam_2.start()
+    # cam_2.start()
 
-    cam_3.start()
+    # cam_3.start()
 
-    cam_4.start()
+    # cam_4.start()
 
-    cam_5.start()
+    # cam_5.start()
 
-    cam_6.start()
+    # cam_6.start()

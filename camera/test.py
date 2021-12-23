@@ -171,13 +171,13 @@ def main(args):
         fps_streams["stream{0}".format(i)]=GETFPS(i)
         print (fps_streams)
     # number_sources=len(args)-1
-    number_sources = 6
+    number_sources = 5
     uri_names = []
     uri_names.append("rtsp://192.168.1.81:554/user=admin&password=&channel=1&stream=0")
     uri_names.append("rtsp://192.168.1.82:554/user=admin&password=&channel=1&stream=0")
     uri_names.append("rtsp://192.168.1.83:554/user=admin&password=&channel=1&stream=0")
     uri_names.append("rtsp://192.168.1.84:554/user=admin&password=&channel=1&stream=0")
-    uri_names.append("rtsp://192.168.1.85:554/user=admin&password=&channel=1&stream=0")
+    # uri_names.append("rtsp://192.168.1.85:554/user=admin&password=&channel=1&stream=0")
     uri_names.append("rtsp://192.168.1.86:554/user=admin&password=&channel=1&stream=0")
     # Standard GStreamer initialization
     GObject.threads_init()
@@ -242,12 +242,9 @@ def main(args):
         sys.stderr.write(" Unable to create transform \n")
 
     print("Creating EGLSink \n")
-    sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
-    filesink = Gst.ElementFactory.make("filesink","sink")
-    filesink.set_property("location", "test.avi")
+    # sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
 
-    if not sink:
-        sys.stderr.write(" Unable to create egl sink \n")
+
 
     if is_live:
         print("Atleast one of the sources is live")
@@ -264,27 +261,73 @@ def main(args):
     tiler.set_property("columns",tiler_columns)
     tiler.set_property("width", TILED_OUTPUT_WIDTH)
     tiler.set_property("height", TILED_OUTPUT_HEIGHT)
-    sink.set_property("qos",0)
 
-    # encoder = Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
-    # encoder.set_property('bitrate', bitrate)
-    # encoder.set_property('preset-level', 1)
-    # encoder.set_property('insert-sps-pps', 1)
-    # encoder.set_property('bufapi-version', 1)
+    # sink.set_property("qos",0)
+
+
 
     print("Adding elements to Pipeline \n")
     # pipeline.add(pgie)
     pipeline.add(tiler)
     pipeline.add(nvvidconv)
     pipeline.add(transform)
-    pipeline.add(sink)
+    
     # pipeline.add(filesink)
 
     print("Linking elements in the Pipeline \n")
     streammux.link(tiler)
-    tiler.link(nvvidconv)
-    nvvidconv.link(transform)
-    transform.link(sink)
+    # tiler.link(nvvidconv)
+    # # nvvidconv.link(transform)
+    queue1 = Gst.ElementFactory.make("queue","queue1")
+    if not queue1:
+        print("make queue failed.................................................. \n\n")
+    pipeline.add(queue1)
+    tiler.link(queue1)
+
+    encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
+    if not encoder:
+        print("make encoder failed...................................................\n\n")
+    pipeline.add(encoder)
+    encoder.set_property('bitrate', 4000000)
+    encoder.set_property('preset-level', 1)
+    encoder.set_property('insert-sps-pps', 1)
+    encoder.set_property('bufapi-version', 1)
+    #     command = ("uridecodebin uri=rtsp://admin:123456@192.168.129.10:554/h265/ch1/main/av_stream ! "
+    #         "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=cam1.mkv")
+    queue1.link(encoder)
+
+    queue2 = Gst.ElementFactory.make("queue",None)
+    if not queue2:
+        print("Failed to make queues ............................................/n/n")
+    pipeline.add(queue2)
+    encoder.link(queue2)
+
+    depay = Gst.ElementFactory.make("rtph264depay",None)
+    if not depay:
+        print("Failed to make depay......................................................../n/n")
+    pipeline.add(depay)
+    queue2.link(depay)
+
+    parser = Gst.ElementFactory.make("h264parse",None)
+    if not parser:
+        print("parser make error ...............................................\n\n")
+    pipeline.add(parser)
+    depay.link(parser)
+
+    mux = Gst.ElementFactory.make("mp4mux", None)
+    if not mux:
+        print("mux make error ...............................................\n\n")
+    pipeline.add(mux)
+    parser.link(mux)
+
+    filesink = Gst.ElementFactory.make("filesink","sink")
+    if not filesink:
+        sys.stderr.write(" Unable to create egl sink \n")
+
+    filesink.set_property("location", "test.mp4")
+
+    pipeline.add(filesink)
+    mux.link(filesink)
 
 
     # create an event loop and feed gstreamer bus mesages to it
