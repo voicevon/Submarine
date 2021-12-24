@@ -1,6 +1,6 @@
 from sensor.water_depth_sensor import WaterDepthSensor
-from  adafruit_servokit import ServoKit
-# from adafruit_pca9685 import PCA9685
+# from  adafruit_servokit import ServoKit
+from adafruit_pca9685 import PCA9685
 
 # import board
 import busio
@@ -45,12 +45,19 @@ class Propellers():
     def __init__(self, i2c_bus: busio.I2C):
         # init PCA9685
         pwm_controller_address = 0x40
-        self.motors = ServoKit(channels=16, i2c=i2c_bus, address=pwm_controller_address, frequency=49.5)
+        # self.motors = ServoKit(channels=16, i2c=i2c_bus, address=pwm_controller_address, frequency=49.5)
+        self.motors = PCA9685(i2c_bus)
+        self.motors.frequency = 49.5
+        self.motors.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = 0x7FFF
+        time.sleep(1)
+        self.motors.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = 0x3FFF
         # self.current_speed = [0,0,0,0, 0,0,0,0]
+        print("cccccccccccccccccccccccccccccccccccccccccccccccccccccccc")
 
     def StartSingleMotor(self, channel_id:int):
         print("   -------------------", channel_id)
         self.motors.servo[channel_id].angle = 90
+        print("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
         # self.TestSingleMotor(channel_id)
     
 
