@@ -128,8 +128,9 @@ demo = {"TestSensor":TestSensor,
         "TestEachPropeller": TestEachPropeller,
         "TestCombineProperller":TestCombineProperller,
          }
-doDemo = demo["TestSensor"]
+# doDemo = demo["TestSensor"]
 # doDemo = demo["TestCombineProperller"]
+doDemo = demo["TestEachPropeller"]
 doDemo()
 
 

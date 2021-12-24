@@ -1,5 +1,4 @@
 from sensor.water_depth_sensor import WaterDepthSensor
-# from  adafruit_servokit import ServoKit
 from adafruit_pca9685 import PCA9685
 
 # import board
@@ -35,6 +34,8 @@ class MOTOR_CHANNEL:
     BOTTOM_XNYN = 12
     BOTTOM_XPYN = 8
 
+
+MIDDLE_CYCLE = 0X8000
 class Propellers():
     '''
     Manage PWM output
@@ -45,28 +46,25 @@ class Propellers():
     def __init__(self, i2c_bus: busio.I2C):
         # init PCA9685
         pwm_controller_address = 0x40
-        # self.motors = ServoKit(channels=16, i2c=i2c_bus, address=pwm_controller_address, frequency=49.5)
         self.motors = PCA9685(i2c_bus)
         self.motors.frequency = 49.5
-        self.motors.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = 0x7FFF
-        time.sleep(1)
-        self.motors.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = 0x3FFF
-        # self.current_speed = [0,0,0,0, 0,0,0,0]
-        print("cccccccccccccccccccccccccccccccccccccccccccccccccccccccc")
+        #self.motors.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = 0x7FFF
+        # time.sleep(1)
+        # self.motors.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = 0x3FFF
 
     def StartSingleMotor(self, channel_id:int):
         print("   -------------------", channel_id)
-        self.motors.servo[channel_id].angle = 90
-        print("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-        # self.TestSingleMotor(channel_id)
+        self.motors.channels[channel_id].duty_cycle = 0x7FFF
+        time.sleep(1)
+        self.motors.channels[channel_id].duty_cycle = 0x3FFF
     
 
     def TestSingleMotor(self,channel_id:int):
         print("   Runing CW  10 seconds  ", channel_id)
-        self.motors.servo[channel_id].angle = 70
+        self.motors.channels[channel_id].duty_cycle = int( MIDDLE_CYCLE + MIDDLE_CYCLE/2)
         time.sleep(10)
         print("       Sleeping  10 seconds   ")
-        self.motors.servo[channel_id].angle = 90
+        self.motors.channels[channel_id].duty_cycle = MIDDLE_CYCLE
         time.sleep(10)
 
 
@@ -90,56 +88,66 @@ class Propellers():
         '''
         Turn on PWM # 1,2,3,4  at the speed
         '''
-        self.my.servo[8].angle = 90
-        self.my.servo[9].angle = 90
+        self.my.servo[8].duty_cycle = 90
+        self.my.servo[9].duty_cycle = 90
         self.my.servo[10].angle = 90
         self.my.servo[11].angle = 90
         
+    def _GetDutyCircle(self, speed) ->int:
+        return 10 * speed
 
     def move_forward(self, speed):
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90 - speed
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = 90 - speed
+        speed = self._GetDutyCircle(speed)
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XNYN].duty_cycle = MIDDLE_CYCLE - speed 
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XPYN].duty_cycle = MIDDLE_CYCLE - speed 
         
     
     def move_backward(self, speed):
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = 90 + speed
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90 + speed
+        speed = self._GetDutyCircle(speed)
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XNYP].duty_cycle = MIDDLE_CYCLE + speed
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XPYP].duty_cycle = MIDDLE_CYCLE + speed
 
     # def move_left(self, speed_clockwise,speed_counterclockwise):
     def move_left(self, speed):
         '''
         Can be 2 motors or 4 motors, We choose 2 motors.
         '''
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYN].angle = 90 + speed
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90 - speed
+        speed = self._GetDutyCircle(speed)
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XPYN].duty_cycle = MIDDLE_CYCLE + speed
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XPYP].duty_cycle = MIDDLE_CYCLE - speed
 
     def move_right(self, speed):
         '''
         Can be 2 motors or 4 motors
         '''
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90 + speed
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYP].angle = 90 - speed
+        speed = self._GetDutyCircle(speed)
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XNYN].duty_cycle = MIDDLE_CYCLE + speed
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XNYP].duty_cycle = MIDDLE_CYCLE - speed
 
     def move_up(self, speed, to_water_depth):
-        self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90 + speed
-        self.motors.servo[MOTOR_CHANNEL.TOP_XNYP].angle = 90 + speed
-        self.motors.servo[MOTOR_CHANNEL.TOP_XNYN].angle = 90 + speed
-        self.motors.servo[MOTOR_CHANNEL.TOP_XPYN].angle = 90 + speed
+        speed = self._GetDutyCircle(speed)
+        self.motors.channels[MOTOR_CHANNEL.TOP_XPYP].duty_cycle = MIDDLE_CYCLE + speed
+        self.motors.channels[MOTOR_CHANNEL.TOP_XNYP].duty_cycle = MIDDLE_CYCLE + speed
+        self.motors.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = MIDDLE_CYCLE + speed
+        self.motors.channels[MOTOR_CHANNEL.TOP_XPYN].duty_cycle = MIDDLE_CYCLE + speed
 
 
     def move_down(self, speed ,to_water_depth):
-        self.motors.servo[MOTOR_CHANNEL.TOP_XPYP].angle = 90 - speed
-        self.motors.servo[MOTOR_CHANNEL.TOP_XNYP].angle = 90 - speed
-        self.motors.servo[MOTOR_CHANNEL.TOP_XNYN].angle = 90 - speed
-        self.motors.servo[MOTOR_CHANNEL.TOP_XPYN].angle = 90 - speed
+        speed = self._GetDutyCircle(speed)
+        self.motors.channels[MOTOR_CHANNEL.TOP_XPYP].duty_cycle = MIDDLE_CYCLE - speed
+        self.motors.channels[MOTOR_CHANNEL.TOP_XNYP].duty_cycle = MIDDLE_CYCLE - speed
+        self.motors.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = MIDDLE_CYCLE - speed
+        self.motors.channels[MOTOR_CHANNEL.TOP_XPYN].duty_cycle = MIDDLE_CYCLE - speed
     
     def turn_left(self, speed:int):
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90 - speed
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90 + speed
+        speed = self._GetDutyCircle(speed)
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XPYP].anduty_cyclegle = MIDDLE_CYCLE - speed
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XNYN].duty_cycle = MIDDLE_CYCLE + speed
 
     def turn_right(self,speed:int) -> None:
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XPYP].angle = 90 + speed
-        self.motors.servo[MOTOR_CHANNEL.BOTTOM_XNYN].angle = 90 - speed
+        speed = self._GetDutyCircle(speed)
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XPYP].duty_cycle = MIDDLE_CYCLE + speed
+        self.motors.channels[MOTOR_CHANNEL.BOTTOM_XNYN].duty_cycle = MIDDLE_CYCLE - speed
     
     def spin(self):
         '''
