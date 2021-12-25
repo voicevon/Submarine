@@ -47,9 +47,10 @@ class Propellers():
     def __init__(self, i2c_bus: busio.I2C):
         # init PCA9685
         # pwm_controller_address = 0x40
-        self.MIDDLE_CYCLE = 0X8000
+        self.MIDDLE_CYCLE = 4800
+        self.cycle_per_degree = 32
         self.pca = PCA9685(i2c_bus)
-        self.pca.frequency = 49.5
+        self.pca.frequency = 50
         #self.pca.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = 0x7FFF
         time.sleep(1)
         # self.pca.channels[MOTOR_CHANNEL.TOP_XNYN].duty_cycle = 0x3FFF
@@ -62,14 +63,30 @@ class Propellers():
     
 
     def TestSingleMotor(self,channel_id:int):
+        # max = 8000
+        # min = 1600
+        # # step = 500
+        # step = max-min -1
+        # print("++++++++++++++++++++++++++++++++++++++")
+        # for i in range(min,max,step):
+        #     self.pca.channels[channel_id].duty_cycle = i
+        #     print (i)
+        #     time.sleep(2)
+
+        # for i in range(max,min,-step):
+        #     self.pca.channels[channel_id].duty_cycle = i
+        #     print(i)
+        #     time.sleep(2)
+
+
+
         print("   Runing CW  10 seconds  -----------------", channel_id)
-        self.pca.channels[channel_id].duty_cycle = int( self.MIDDLE_CYCLE + 360 * 10)
-        time.sleep(10)
+        self.pca.channels[channel_id].duty_cycle = int( self.MIDDLE_CYCLE + self.cycle_per_degree * 25)
+        time.sleep(2)
         print("       Sleeping  10 seconds   ")
         self.pca.channels[channel_id].duty_cycle = self.MIDDLE_CYCLE
-        self.pca.channels[channel_id].duty_cycle = self.MIDDLE_CYCLE
 
-        time.sleep(10)
+        time.sleep(2)
 
 
     def StartAllMotors(self):

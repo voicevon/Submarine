@@ -93,12 +93,12 @@ class Peripheral():
         print("    Uwbot.Init Ads1015 is done...")
 
         #-----------------------------------------------------------------------
-        self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', baudrate=9600)
-        self.__uart_port.timeout = 3
-        if self.__uart_port.isOpen():
-            print("Uwbot.Init UART is done...")
-        else:
-            print("  !!!!    !!!!  !!!!   !!!!  Uwbot.Init UART is Failed...")
+        # self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', baudrate=9600)
+        # self.__uart_port.timeout = 3
+        # if self.__uart_port.isOpen():
+        #     print("Uwbot.Init UART is done...")
+        # else:
+        #     print("  !!!!    !!!!  !!!!   !!!!  Uwbot.Init UART is Failed...")
 
         #-----------------------------------------------------------------------
         self.__lights = []
