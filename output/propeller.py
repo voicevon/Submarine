@@ -115,7 +115,7 @@ class Propellers():
         self.my.servo[11].angle = 90
         
     def _GetDutyCircle(self, speed) ->int:
-        return 360 * speed
+        return self.cycle_per_degree * speed
 
     def move_forward(self, speed):
         speed = self._GetDutyCircle(speed)
