@@ -23,19 +23,12 @@ def TestSensor():
         # result = mybot.ReadSensor(SensorsType.DISTANCE_TO_BOTTOM)
         # print("Distance to water bottom = ", result)
 
-        # result = mybot.ReadSensor(SensorsType.ROOM_TEMPERATURE)
-        # print("Room temperature = ", result)
+        room_temperature = mybot.ReadSensor(SensorsType.ROOM_TEMPERATURE)
+        battery_percent = mybot.ReadSensor(SensorsType.BATTERY_PERCENT)
+        water_depth = mybot.ReadSensor(SensorsType.WATER_DEPTH)
+        gravity_z = mybot.ReadSensor(SensorsType.GRAVITY_Z)
+        print("room_temperature=%.2f battery_percent=%.2f water_depth=%.2f gravity_z=%i" %room_temperature %battery_percent %water_depth %gravity_z)
         
-        # result = mybot.ReadSensor(SensorsType.BATTERY_PERCENT)
-        # print("Battery voltage = ", result)
-
-        result = mybot.ReadSensor(SensorsType.WATER_DEPTH)
-        print("WaterDepth = ", result)
-
-
-
-    result = mybot.ReadSensor(SensorsType.GRAVITY_Z)
-    print('Gravity orientation = ', result)
 
 
 def TestLight():
