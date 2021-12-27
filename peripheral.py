@@ -102,7 +102,21 @@ class Peripheral():
 
         #-----------------------------------------------------------------------
         self.__lights = []
-        light_pins = [35,33,31,29,19,15]
+        light_pins = [15,19,29,31,33,35]
+        # PIN_LIGHT_TOP = 15
+        # PIN_LIGHT_BOTTOM = 19
+        # PIN_LIGHT_LEFT = 29
+        # PIN_LIGHT_RIGHT = 31
+        # PIN_LIGHT_FRONT =33
+        # PIN_LIGHT_REAR = 35
+
+    #     class LIGHT_INDEX:
+    # PIN_LIGHT_TOP = 0
+    # PIN_LIGHT_BOTTOM = 1
+    # PIN_LIGHT_LEFT = 2
+    # PIN_LIGHT_RIGHT = 3
+    # PIN_LIGHT_FRONT = 4
+    # PIN_LIGHT_REAR = 5
         InitGPIO()
         for i in range(6):
             new_light = SingleLight(light_pins[i])

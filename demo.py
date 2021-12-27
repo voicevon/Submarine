@@ -32,7 +32,12 @@ def TestSensor():
 
 
 def TestLight():
-    pass
+    while True:
+        for i in range(6):
+            mybot.peripheral.TurnOnLignt(i)
+            time.sleep(5)
+            mybot.peripheral.TurnOffLignt(i)
+            time.sleep(5)
 
 
 from output.propeller import MOTOR_CHANNEL
@@ -122,8 +127,9 @@ demo = {"TestSensor":TestSensor,
         "TestCombineProperller":TestCombineProperller,
          }
 # doDemo = demo["TestSensor"]
+doDemo = demo["TestLights"]
 # doDemo = demo["TestCombineProperller"]
-doDemo = demo["TestEachPropeller"]
+# doDemo = demo["TestEachPropeller"]
 doDemo()
 
 
