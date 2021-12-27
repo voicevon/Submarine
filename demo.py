@@ -27,7 +27,7 @@ def TestSensor():
         battery_percent = mybot.ReadSensor(SensorsType.BATTERY_PERCENT)
         water_depth = mybot.ReadSensor(SensorsType.WATER_DEPTH)
         gravity_z = mybot.ReadSensor(SensorsType.GRAVITY_Z)
-        print("room_temperature=%.2f battery_percent=%.2f water_depth=%.2f gravity_z=%i" %room_temperature %battery_percent %water_depth %gravity_z)
+        print("room_temperature=%.2f battery_percent=%.2f water_depth=%.2f gravity_z=%i" %(room_temperature,battery_percent,water_depth,gravity_z))
         
 
 
