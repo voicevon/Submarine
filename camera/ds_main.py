@@ -183,7 +183,7 @@ def create_source_bin(index, uri):
 
 # def main(args):
 def main(source_uris):
-    for i in range(6):
+    for i in range(len(source_uris)):
         fps_streams["stream{0}".format(i)] = GETFPS(i)
     number_sources = 6
 
@@ -411,12 +411,12 @@ def parse_args():
 class VideoCenter:
     def __init__(self) -> None:
         self.uris = list(6)
-        self.uris[0] = "rtsp://admin:a@192.168.1.81"
+        self.uris[0] = "rtsp://admin:a@192.168.1.84"
         self.uris[1] = "rtsp://admin:a@192.168.1.82"
-        self.uris[2] = "rtsp://admin:a@192.168.1.83"
-        self.uris[3] = "rtsp://admin:a@192.168.1.84"
-        self.uris[4] = "rtsp://admin:a@192.168.1.85"
-        self.uris[5] = "rtsp://admin:a@192.168.1.86"
+        # self.uris[2] = "rtsp://admin:a@192.168.1.83"
+        # self.uris[3] = "rtsp://admin:a@192.168.1.84"
+        # self.uris[4] = "rtsp://admin:a@192.168.1.85"
+        # self.uris[5] = "rtsp://admin:a@192.168.1.86"
 
     def StartStop(self, cameras):
         for i in range(6):
@@ -428,6 +428,7 @@ class VideoCenter:
 
 if __name__ == '__main__':
     videoCenter = VideoCenter()
+    main(videoCenter.uris)
     videoCenter.StartStop([True, False, False, False, False, False])
     # stream_path = parse_args()
     # sys.exit(main(stream_path))
