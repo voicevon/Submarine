@@ -1,21 +1,8 @@
 #!/usr/bin/env python3
 
-################################################################################
-# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-################################################################################
+# cd ~/Sumbrine/camera/
+# python3 ds_main.py rtsp://admin:a@192.168.1.82:554 rtsp://admin:a@192.168.1.81 rtsp://admin:a@192.168.1.82   rtsp://admin:a@192.168.1.83 rtsp://admin:a@192.168.1.84 rtsp://admin:a@192.168.1.86
+
 import sys
 sys.path.append("../")
 import pyds
@@ -288,13 +275,28 @@ def make_encoder():
     return encoder
 
 def make_nvtransform():
+    print("Creating nvtransform")
     transform = Gst.ElementFactory.make("nvegltransform","nvegltransform")
     if not transform:
         sys.stderr.write("  Unable to create nvegltransform")
     return transform
 
+def make_mp4mux():
+    print("Creating mp4mux")
+    mux = Gst.ElementFactory.make("mp4mux","mp4mux")
+    if not mux:
+        sys.stderr.write("  Unable to create mp4mux")
+    return mux
+
+def make_h264parse():
+    print("Creating H264 parse")
+    parse = Gst.ElementFactory.make("nvv4l2h265enc","nvv4l2h265enc")
+    if not parse:
+        sys.stderr.write("  Unable to create nvv4l2h265enc")
+    return parse
 
 def make_nveglglessink():
+    print("Creating nveglessink")
     sink=Gst.ElementFactory.make("nveglglessink","nveglglesink")
     if not sink:
         sys.stderr.write("  Unable to create nveglglessink")
@@ -302,6 +304,7 @@ def make_nveglglessink():
 
 def make_udp_sink(updsink_port_num):
     # Make the UDP sink
+    print("Creating udp sink")
     sink = Gst.ElementFactory.make("udpsink", "udpsink")
     if not sink:
         sys.stderr.write(" Unable to create udpsink")
@@ -311,10 +314,15 @@ def make_udp_sink(updsink_port_num):
     sink.set_property("async", False)
     sink.set_property("sync", 1)
     sink.set_property("qos", 0)
-
     return sink
     
-
+def make_file_sink(filename):
+    print("Creating filesink")
+    sink = Gst.ElementFactory.make("filesink", "filesink")
+    if not sink:
+        sys.stderr.write("  Unable to create filesink")
+    sink.set_property("location",filename)
+    return sink
 
 def main(uris):
     # Check input arguments
@@ -365,9 +373,14 @@ def main(uris):
     rtppay =make_rtppay()
 
     updsink_port_num = 5400
-    sink = make_udp_sink(updsink_port_num)
+    udp_sink = make_udp_sink(updsink_port_num)
     transform = make_nvtransform()
     nvsink = make_nveglglessink()
+    parse = make_h264parse()
+    mp4mux = make_mp4mux()
+    filesink = make_file_sink("abc")
+    
+
 
     print("Adding elements to Pipeline \n")
     # pipeline.add(pgie)
@@ -378,33 +391,49 @@ def main(uris):
     pipeline.add(caps)
     pipeline.add(encoder)
     pipeline.add(rtppay)
-    # pipeline.add(sink)
+    pipeline.add(udp_sink)
+    pipeline.add(parse)
+    pipeline.add(mp4mux)
     pipeline.add(transform)
     pipeline.add(nvsink)
 
-    # streammux.link(pgie)
-    # pgie.link(nvvidconv)
-    # nvvidconv.link(tiler)
-    # tiler.link(nvosd)
-    # nvosd.link(nvvidconv_postosd)
-    # nvvidconv_postosd.link(caps)
-    # caps.link(encoder)
-    # encoder.link(rtppay)
-    # rtppay.link(sink)
+    pipeline.add(filesink)
 
-    streammux.link(nvvidconv)
-    # pgie.link(nvvidconv)
-    nvvidconv.link(tiler)
-    tiler.link(nvosd)
-    nvosd.link(transform)
-    transform.link(nvsink)
+
+    if False:
+        # ------  RTSP ouput
+        streammux.link(pgie)
+        pgie.link(nvvidconv)
+        nvvidconv.link(tiler)
+        tiler.link(nvosd)
+        nvosd.link(nvvidconv_postosd)
+        nvvidconv_postosd.link(caps)
+        caps.link(encoder)
+        encoder.link(rtppay)
+        rtppay.link(udp_sink)
+
+    #-----------  Screen output
+    if True:
+        streammux.link(tiler)
+        # pgie.link(nvvidconv)
+        tiler.link(nvvidconv)
+        nvvidconv.link(nvosd)
+        nvosd.link(transform)
+        transform.link(nvsink)
+
     
-    # nvosd.link(nvvidconv_postosd)
-    # nvvidconv_postosd.link(caps)
-    # nvosd.link(caps)
-    # caps.link(encoder)
-    # encoder.link(rtppay)
-    # rtppay.link(sink)
+    if False:
+        #--------------  Save to file
+        streammux.link(nvvidconv)
+        # pgie.link(nvvidconv)
+        nvvidconv.link(tiler)
+        tiler.link(nvosd)
+        nvosd.link(nvvidconv_postosd)
+        nvvidconv_postosd.link(caps)
+        caps.link(encoder)
+        encoder.link(parse)
+        parse.link(mp4mux)
+        mp4mux.link(filesink)
 
     # create an event loop and feed gstreamer bus mesages to it
     loop = GObject.MainLoop()
