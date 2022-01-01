@@ -195,26 +195,48 @@ def create_source_bin(index, uri):
     return nbin
 
 
-def make_streammux():
+def make_streammux(number_sources):
     print("Creating streamux \n ")
     # Create nvstreammux instance to form batches from one or more sources.
     streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
     if not streammux:
         sys.stderr.write(" Unable to create NvStreamMux \n")
+    streammux.set_property("width", 1920)
+    streammux.set_property("height", 1080)
+    streammux.set_property("batch-size", 1)
+    streammux.set_property("batched-push-timeout", 4000000)        
     return streammux
     
-def make_pgie():
+def make_pgie(number_sources):
     print("Creating Pgie \n ")
     pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
     if not pgie:
         sys.stderr.write(" Unable to create pgie \n")
+    pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
+
+    pgie_batch_size = pgie.get_property("batch-size")
+    if pgie_batch_size != number_sources:
+        print(
+            "WARNING: Overriding infer-config batch-size",
+            pgie_batch_size,
+            " with number of sources ",
+            number_sources,
+            " \n",
+        )
+        pgie.set_property("batch-size", number_sources)        
     return pgie
 
-def make_tiler():
+def make_tiler(number_sources):
     print("Creating tiler \n ")
     tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
     if not tiler:
         sys.stderr.write(" Unable to create tiler \n")
+    tiler_rows = int(math.sqrt(number_sources))
+    tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
+    tiler.set_property("rows", tiler_rows)
+    tiler.set_property("columns", tiler_columns)
+    tiler.set_property("width", TILED_OUTPUT_WIDTH)
+    tiler.set_property("height", TILED_OUTPUT_HEIGHT)        
     return tiler    
 
 def make_nvvidconv():
@@ -224,8 +246,45 @@ def make_nvvidconv():
         sys.stderr.write(" Unable to create nvvidconv \n")
     return nvvidconv
 
-def make_sink():
-    pass
+def make_nvosd():
+    print("Creating nvosd \n ")
+    nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
+    if not nvosd:
+        sys.stderr.write(" Unable to create nvosd \n")
+    return nvosd
+
+def make_nvvidconv_post():
+    nvvidconv_postosd = Gst.ElementFactory.make("nvvideoconvert", "convertor_postosd")
+    if not nvvidconv_postosd:
+        sys.stderr.write(" Unable to create nvvidconv_postosd \n")
+    return nvvidconv_postosd    
+
+def make_encoder():
+    # Make the encoder
+    print("Creating H264 Encoder")
+    encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
+    if not encoder:
+        sys.stderr.write(" Unable to create encoder")
+    encoder.set_property("bitrate", bitrate)
+    encoder.set_property("preset-level", 1)
+    encoder.set_property("insert-sps-pps", 1)
+    encoder.set_property("bufapi-version", 1)
+    return encoder
+
+def make_udp_sink(updsink_port_num):
+    # Make the UDP sink
+    sink = Gst.ElementFactory.make("udpsink", "udpsink")
+    if not sink:
+        sys.stderr.write(" Unable to create udpsink")
+
+    sink.set_property("host", "224.224.255.255")
+    sink.set_property("port", updsink_port_num)
+    sink.set_property("async", False)
+    sink.set_property("sync", 1)
+    sink.set_property("qos", 0)
+
+    return sink
+    
 
 
 def main(uris):
@@ -247,7 +306,7 @@ def main(uris):
     if not pipeline:
         sys.stderr.write(" Unable to create Pipeline \n")
 
-    streammux = make_streammux()
+    streammux = make_streammux(number_sources)
     pipeline.add(streammux)
     for i in range(number_sources):
         print("Creating source_bin ", i, " \n ")
@@ -267,83 +326,35 @@ def main(uris):
             sys.stderr.write("Unable to create src pad bin \n")
         srcpad.link(sinkpad)
 
-    pgie = make_pgie()
-    tiler = make_tiler()
+    pgie = make_pgie(number_sources)
+    tiler = make_tiler(number_sources)
     nvvidconv = make_nvvidconv()
+    nvosd = make_nvosd()
+    nvvidconv_postosd = make_nvvidconv_post()
 
-
-    print("Creating nvosd \n ")
-    nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
-    if not nvosd:
-        sys.stderr.write(" Unable to create nvosd \n")
-    nvvidconv_postosd = Gst.ElementFactory.make(
-        "nvvideoconvert", "convertor_postosd")
-    if not nvvidconv_postosd:
-        sys.stderr.write(" Unable to create nvvidconv_postosd \n")
 
     # Create a caps filter
     caps = Gst.ElementFactory.make("capsfilter", "filter")
     caps.set_property(
         "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
     )
-
-    # Make the encoder
-    print("Creating H264 Encoder")
-    encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
-    if not encoder:
-        sys.stderr.write(" Unable to create encoder")
-    encoder.set_property("bitrate", bitrate)
-    encoder.set_property("preset-level", 1)
-    encoder.set_property("insert-sps-pps", 1)
-    encoder.set_property("bufapi-version", 1)
+    encoder = make_encoder()
 
     # Make the payload-encode video into RTP packets
     rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
     print("Creating H264 rtppay")
     if not rtppay:
         sys.stderr.write(" Unable to create rtppay")
-
-    # Make the UDP sink
     updsink_port_num = 5400
-    sink = Gst.ElementFactory.make("udpsink", "udpsink")
-    if not sink:
-        sys.stderr.write(" Unable to create udpsink")
 
-    sink.set_property("host", "224.224.255.255")
-    sink.set_property("port", updsink_port_num)
-    sink.set_property("async", False)
-    sink.set_property("sync", 1)
-
-    streammux.set_property("width", 1920)
-    streammux.set_property("height", 1080)
-    streammux.set_property("batch-size", 1)
-    streammux.set_property("batched-push-timeout", 4000000)
-
-    if gie=="nvinfer":
-        pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
-    else:
-        pgie.set_property("config-file-path", "dstest1_pgie_inferserver_config.txt")
+    sink = make_udp_sink(updsink_port_num)
+    
 
 
-    pgie_batch_size = pgie.get_property("batch-size")
-    if pgie_batch_size != number_sources:
-        print(
-            "WARNING: Overriding infer-config batch-size",
-            pgie_batch_size,
-            " with number of sources ",
-            number_sources,
-            " \n",
-        )
-        pgie.set_property("batch-size", number_sources)
+
 
     print("Adding elements to Pipeline \n")
-    tiler_rows = int(math.sqrt(number_sources))
-    tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
-    tiler.set_property("rows", tiler_rows)
-    tiler.set_property("columns", tiler_columns)
-    tiler.set_property("width", TILED_OUTPUT_WIDTH)
-    tiler.set_property("height", TILED_OUTPUT_HEIGHT)
-    sink.set_property("qos", 0)
+
 
     pipeline.add(pgie)
     pipeline.add(tiler)
