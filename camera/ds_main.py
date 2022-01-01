@@ -195,11 +195,44 @@ def create_source_bin(index, uri):
     return nbin
 
 
-def main(args):
+def make_streammux():
+    print("Creating streamux \n ")
+    # Create nvstreammux instance to form batches from one or more sources.
+    streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
+    if not streammux:
+        sys.stderr.write(" Unable to create NvStreamMux \n")
+    return streammux
+    
+def make_pgie():
+    print("Creating Pgie \n ")
+    pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
+    if not pgie:
+        sys.stderr.write(" Unable to create pgie \n")
+    return pgie
+
+def make_tiler():
+    print("Creating tiler \n ")
+    tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
+    if not tiler:
+        sys.stderr.write(" Unable to create tiler \n")
+    return tiler    
+
+def make_nvvidconv():
+    print("Creating nvvidconv \n ")
+    nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
+    if not nvvidconv:
+        sys.stderr.write(" Unable to create nvvidconv \n")
+    return nvvidconv
+
+def make_sink():
+    pass
+
+
+def main(uris):
     # Check input arguments
-    for i in range(0, len(args)):
+    for i in range(0, len(uris)):
         fps_streams["stream{0}".format(i)] = GETFPS(i)
-    number_sources = len(args)
+    number_sources = len(uris)
 
     # Standard GStreamer initialization
     GObject.threads_init()
@@ -213,17 +246,12 @@ def main(args):
 
     if not pipeline:
         sys.stderr.write(" Unable to create Pipeline \n")
-    print("Creating streamux \n ")
 
-    # Create nvstreammux instance to form batches from one or more sources.
-    streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
-    if not streammux:
-        sys.stderr.write(" Unable to create NvStreamMux \n")
-
+    streammux = make_streammux()
     pipeline.add(streammux)
     for i in range(number_sources):
         print("Creating source_bin ", i, " \n ")
-        uri_name = args[i]
+        uri_name = uris[i]
         if uri_name.find("rtsp://") == 0:
             is_live = True
         source_bin = create_source_bin(i, uri_name)
@@ -239,21 +267,11 @@ def main(args):
             sys.stderr.write("Unable to create src pad bin \n")
         srcpad.link(sinkpad)
 
-    print("Creating Pgie \n ")
-    if gie=="nvinfer":
-        pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
-    else:
-        pgie = Gst.ElementFactory.make("nvinferserver", "primary-inference")
-    if not pgie:
-        sys.stderr.write(" Unable to create pgie \n")
-    print("Creating tiler \n ")
-    tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
-    if not tiler:
-        sys.stderr.write(" Unable to create tiler \n")
-    print("Creating nvvidconv \n ")
-    nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
-    if not nvvidconv:
-        sys.stderr.write(" Unable to create nvvidconv \n")
+    pgie = make_pgie()
+    tiler = make_tiler()
+    nvvidconv = make_nvvidconv()
+
+
     print("Creating nvosd \n ")
     nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
     if not nvosd:
@@ -270,27 +288,18 @@ def main(args):
     )
 
     # Make the encoder
-    if codec == "H264":
-        encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
-        print("Creating H264 Encoder")
-    elif codec == "H265":
-        encoder = Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
-        print("Creating H265 Encoder")
+    print("Creating H264 Encoder")
+    encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
     if not encoder:
         sys.stderr.write(" Unable to create encoder")
     encoder.set_property("bitrate", bitrate)
-    if is_aarch64():
-        encoder.set_property("preset-level", 1)
-        encoder.set_property("insert-sps-pps", 1)
-        encoder.set_property("bufapi-version", 1)
+    encoder.set_property("preset-level", 1)
+    encoder.set_property("insert-sps-pps", 1)
+    encoder.set_property("bufapi-version", 1)
 
     # Make the payload-encode video into RTP packets
-    if codec == "H264":
-        rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
-        print("Creating H264 rtppay")
-    elif codec == "H265":
-        rtppay = Gst.ElementFactory.make("rtph265pay", "rtppay")
-        print("Creating H265 rtppay")
+    rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
+    print("Creating H264 rtppay")
     if not rtppay:
         sys.stderr.write(" Unable to create rtppay")
 
@@ -393,31 +402,38 @@ def main(args):
     pipeline.set_state(Gst.State.NULL)
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='RTSP Output Sample Application Help ')
-    parser.add_argument("-i", "--input",
-                  help="Path to input H264 elementry stream", nargs="+", default=["a"], required=True)
-    parser.add_argument("-g", "--gie", default="nvinfer",
-                  help="choose GPU inference engine type nvinfer or nvinferserver , default=nvinfer", choices=['nvinfer','nvinferserver'])
-    parser.add_argument("-c", "--codec", default="H264",
-                  help="RTSP Streaming Codec H264/H265 , default=H264", choices=['H264','H265'])
-    parser.add_argument("-b", "--bitrate", default=4000000,
-                  help="Set the encoding bitrate ", type=int)
-    # Check input arguments
-    if len(sys.argv)==1:
-        parser.print_help(sys.stderr)
-        sys.exit(1)
-    args = parser.parse_args()
+
+def set_global_var():
     global codec
     global bitrate
     global stream_path
     global gie
-    gie = args.gie
-    codec = args.codec
-    bitrate = args.bitrate
-    stream_path = args.input
-    return stream_path
+    gie = "nvinfer"
+    codec = "H264"
+    bitrate = 4000000
+    stream_path = ""
+    return stream_path    
+
+class VideoCenter:
+    def __init__(self) -> None:
+        self.uris = list()
+        for i in range(2):
+            self.uris.append('')
+        self.uris[0] = "rtsp://admin:a@192.168.1.84"
+        self.uris[1] = "rtsp://admin:a@192.168.1.82"
+        # self.uris[2] = "rtsp://admin:a@192.168.1.83"
+        # self.uris[3] = "rtsp://admin:a@192.168.1.84"
+        # self.uris[4] = "rtsp://admin:a@192.168.1.85"
+        # self.uris[5] = "rtsp://admin:a@192.168.1.86"
+
+    def StartStop(self, cameras):
+        for i in range(6):
+            if cameras[i]:
+                pass
+            else:
+                pass
 
 if __name__ == '__main__':
-    stream_path = parse_args()
-    sys.exit(main(stream_path))
+    set_global_var()
+    videoCenter = VideoCenter()
+    sys.exit(main(videoCenter.uris))
