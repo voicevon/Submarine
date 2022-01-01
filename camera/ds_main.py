@@ -185,7 +185,7 @@ def create_source_bin(index, uri):
 def main(source_uris):
     for i in range(len(source_uris)):
         fps_streams["stream{0}".format(i)] = GETFPS(i)
-    number_sources = 6
+    number_sources = len(source_uris)
 
     # Standard GStreamer initialization
     GObject.threads_init()
@@ -226,24 +226,25 @@ def main(source_uris):
         srcpad.link(sinkpad)
 
     print("Creating Pgie \n ")
-    if gie=="nvinfer":
-        pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
-    else:
-        pgie = Gst.ElementFactory.make("nvinferserver", "primary-inference")
+    pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
     if not pgie:
         sys.stderr.write(" Unable to create pgie \n")
+
     print("Creating tiler \n ")
     tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
     if not tiler:
         sys.stderr.write(" Unable to create tiler \n")
+
     print("Creating nvvidconv \n ")
     nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
     if not nvvidconv:
         sys.stderr.write(" Unable to create nvvidconv \n")
+
     print("Creating nvosd \n ")
     nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
     if not nvosd:
         sys.stderr.write(" Unable to create nvosd \n")
+
     nvvidconv_postosd = Gst.ElementFactory.make(
         "nvvideoconvert", "convertor_postosd")
     if not nvvidconv_postosd:
@@ -256,27 +257,19 @@ def main(source_uris):
     )
 
     # Make the encoder
-    if codec == "H264":
-        encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
-        print("Creating H264 Encoder")
-    elif codec == "H265":
-        encoder = Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
-        print("Creating H265 Encoder")
+    encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
+    print("Creating H264 Encoder")
+
     if not encoder:
         sys.stderr.write(" Unable to create encoder")
-    encoder.set_property("bitrate", bitrate)
-    if is_aarch64():
-        encoder.set_property("preset-level", 1)
-        encoder.set_property("insert-sps-pps", 1)
-        encoder.set_property("bufapi-version", 1)
+    encoder.set_property("bitrate", 4000000)
+    encoder.set_property("preset-level", 1)
+    encoder.set_property("insert-sps-pps", 1)
+    encoder.set_property("bufapi-version", 1)
 
     # Make the payload-encode video into RTP packets
-    if codec == "H264":
-        rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
-        print("Creating H264 rtppay")
-    elif codec == "H265":
-        rtppay = Gst.ElementFactory.make("rtph265pay", "rtppay")
-        print("Creating H265 rtppay")
+    rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
+    print("Creating H264 rtppay")
     if not rtppay:
         sys.stderr.write(" Unable to create rtppay")
 
@@ -296,10 +289,10 @@ def main(source_uris):
     streammux.set_property("batch-size", 1)
     streammux.set_property("batched-push-timeout", 4000000)
 
-    if gie=="nvinfer":
-        pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
-    else:
-        pgie.set_property("config-file-path", "dstest1_pgie_inferserver_config.txt")
+    print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+    pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
+    print('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')
+
 
 
     pgie_batch_size = pgie.get_property("batch-size")
@@ -358,7 +351,7 @@ def main(source_uris):
     factory = GstRtspServer.RTSPMediaFactory.new()
     factory.set_launch(
         '( udpsrc name=pay0 port=%d buffer-size=524288 caps="application/x-rtp, media=video, clock-rate=90000, encoding-name=(string)%s, payload=96 " )'
-        % (updsink_port_num, codec)
+        % (updsink_port_num, 'H264')
     )
     factory.set_shared(True)
     server.get_mount_points().add_factory("/ds-test", factory)
@@ -380,20 +373,6 @@ def main(source_uris):
 
 
 def parse_args():
-    # parser = argparse.ArgumentParser(description='RTSP Output Sample Application Help ')
-    # parser.add_argument("-i", "--input",
-    #               help="Path to input H264 elementry stream", nargs="+", default=["a"], required=True)
-    # parser.add_argument("-g", "--gie", default="nvinfer",
-    #               help="choose GPU inference engine type nvinfer or nvinferserver , default=nvinfer", choices=['nvinfer','nvinferserver'])
-    # parser.add_argument("-c", "--codec", default="H264",
-    #               help="RTSP Streaming Codec H264/H265 , default=H264", choices=['H264','H265'])
-    # parser.add_argument("-b", "--bitrate", default=4000000,
-    #               help="Set the encoding bitrate ", type=int)
-    # # Check input arguments
-    # if len(sys.argv)==1:
-    #     parser.print_help(sys.stderr)
-    #     sys.exit(1)
-    # args = parser.parse_args()
     global codec 
     codec = "H264"
     global bitrate
@@ -402,15 +381,13 @@ def parse_args():
     stream_path = ["a"]
     global gie
     gie = "nvinfer"
-    # gie = args.gie
-    # codec = args.codec
-    # bitrate = args.bitrate
-    # stream_path = args.input
     return stream_path
 
 class VideoCenter:
     def __init__(self) -> None:
-        self.uris = list(6)
+        self.uris = list()
+        for i in range(2):
+            self.uris.append('')
         self.uris[0] = "rtsp://admin:a@192.168.1.84"
         self.uris[1] = "rtsp://admin:a@192.168.1.82"
         # self.uris[2] = "rtsp://admin:a@192.168.1.83"
@@ -430,5 +407,3 @@ if __name__ == '__main__':
     videoCenter = VideoCenter()
     main(videoCenter.uris)
     videoCenter.StartStop([True, False, False, False, False, False])
-    # stream_path = parse_args()
-    # sys.exit(main(stream_path))
