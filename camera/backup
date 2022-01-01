@@ -1,21 +1,5 @@
 #!/usr/bin/env python3
 
-################################################################################
-# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-################################################################################
 import sys
 sys.path.append("../")
 import pyds
@@ -34,6 +18,7 @@ import configparser
 import argparse
 
 from common.FPS import GETFPS
+
 
 fps_streams = {}
 
@@ -194,12 +179,75 @@ def create_source_bin(index, uri):
         return None
     return nbin
 
+def make_encoder():
+    # Make the encoder
+    print("Creating H264 Encoder")
+    encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
 
-def main(args):
-    # Check input arguments
-    for i in range(0, len(args)):
+    if not encoder:
+        sys.stderr.write(" Unable to create encoder")
+    encoder.set_property("bitrate", 4000000)
+    encoder.set_property("preset-level", 1)
+    encoder.set_property("insert-sps-pps", 1)
+    encoder.set_property("bufapi-version", 1)
+    return encoder
+
+def make_streammux():
+    # Create nvstreammux instance to form batches from one or more sources.
+    print("Creating streamux \n ")
+    streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
+    if not streammux:
+        sys.stderr.write(" Unable to create NvStreamMux \n")
+    streammux.set_property("width", 1920)
+    streammux.set_property("height", 1080)
+    streammux.set_property("batch-size", 1)
+    streammux.set_property("batched-push-timeout", 4000000)        
+    return streammux
+
+def make_pgie():
+    print("Creating Pgie \n ")
+    pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
+    if not pgie:
+        sys.stderr.write(" Unable to create pgie \n")
+    return pgie
+
+def make_tiler():
+    print("Creating tiler \n ")
+    tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
+    if not tiler:
+        sys.stderr.write(" Unable to create tiler \n")
+    return tiler
+
+def make_nvvidconv():
+    print("Creating nvvidconv \n ")
+    nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
+    if not nvvidconv:
+        sys.stderr.write(" Unable to create nvvidconv \n")
+    return nvvidconv
+
+def make_nvosd():
+    print("Creating nvosd \n ")
+    nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
+    if not nvosd:
+        sys.stderr.write(" Unable to create nvosd \n")
+    return nvosd
+
+def make_sink(updsink_port_num):
+    sink = Gst.ElementFactory.make("udpsink", "udpsink")
+    if not sink:
+        sys.stderr.write(" Unable to create udpsink")
+
+    sink.set_property("host", "224.224.255.255")
+    sink.set_property("port", updsink_port_num)
+    sink.set_property("async", False)
+    sink.set_property("sync", 1)
+    return sink
+
+# def main(args):
+def main(source_uris):
+    for i in range(len(source_uris)):
         fps_streams["stream{0}".format(i)] = GETFPS(i)
-    number_sources = len(args)
+    number_sources = len(source_uris)
 
     # Standard GStreamer initialization
     GObject.threads_init()
@@ -213,19 +261,18 @@ def main(args):
 
     if not pipeline:
         sys.stderr.write(" Unable to create Pipeline \n")
-    print("Creating streamux \n ")
 
-    # Create nvstreammux instance to form batches from one or more sources.
-    streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
-    if not streammux:
-        sys.stderr.write(" Unable to create NvStreamMux \n")
-
+    # # Create nvstreammux instance to form batches from one or more sources.
+    # streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
+    # if not streammux:
+    #     sys.stderr.write(" Unable to create NvStreamMux \n")
+    streammux = make_streammux()
     pipeline.add(streammux)
     for i in range(number_sources):
         print("Creating source_bin ", i, " \n ")
-        uri_name = args[i]
-        if uri_name.find("rtsp://") == 0:
-            is_live = True
+        # uri_name = args[i]
+        uri_name = source_uris[i]
+        is_live = True
         source_bin = create_source_bin(i, uri_name)
         if not source_bin:
             sys.stderr.write("Unable to create source bin \n")
@@ -239,25 +286,14 @@ def main(args):
             sys.stderr.write("Unable to create src pad bin \n")
         srcpad.link(sinkpad)
 
-    print("Creating Pgie \n ")
-    if gie=="nvinfer":
-        pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
-    else:
-        pgie = Gst.ElementFactory.make("nvinferserver", "primary-inference")
-    if not pgie:
-        sys.stderr.write(" Unable to create pgie \n")
-    print("Creating tiler \n ")
-    tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
-    if not tiler:
-        sys.stderr.write(" Unable to create tiler \n")
-    print("Creating nvvidconv \n ")
-    nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
-    if not nvvidconv:
-        sys.stderr.write(" Unable to create nvvidconv \n")
-    print("Creating nvosd \n ")
-    nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
-    if not nvosd:
-        sys.stderr.write(" Unable to create nvosd \n")
+    pgie = make_pgie()
+    tiler = make_tiler()
+    nvvidconv = make_nvvidconv()
+    nvosd = make_nvvidconv()
+
+
+
+
     nvvidconv_postosd = Gst.ElementFactory.make(
         "nvvideoconvert", "convertor_postosd")
     if not nvvidconv_postosd:
@@ -268,52 +304,21 @@ def main(args):
     caps.set_property(
         "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
     )
-
-    # Make the encoder
-    if codec == "H264":
-        encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
-        print("Creating H264 Encoder")
-    elif codec == "H265":
-        encoder = Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
-        print("Creating H265 Encoder")
-    if not encoder:
-        sys.stderr.write(" Unable to create encoder")
-    encoder.set_property("bitrate", bitrate)
-    if is_aarch64():
-        encoder.set_property("preset-level", 1)
-        encoder.set_property("insert-sps-pps", 1)
-        encoder.set_property("bufapi-version", 1)
+    encoder = make_encoder()
 
     # Make the payload-encode video into RTP packets
-    if codec == "H264":
-        rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
-        print("Creating H264 rtppay")
-    elif codec == "H265":
-        rtppay = Gst.ElementFactory.make("rtph265pay", "rtppay")
-        print("Creating H265 rtppay")
+    rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
+    print("Creating H264 rtppay")
     if not rtppay:
         sys.stderr.write(" Unable to create rtppay")
-
+    print("aaaaaaaaaaaaaaaaaaaaaaaaa")
     # Make the UDP sink
     updsink_port_num = 5400
-    sink = Gst.ElementFactory.make("udpsink", "udpsink")
-    if not sink:
-        sys.stderr.write(" Unable to create udpsink")
+    sink = make_sink(updsink_port_num)
 
-    sink.set_property("host", "224.224.255.255")
-    sink.set_property("port", updsink_port_num)
-    sink.set_property("async", False)
-    sink.set_property("sync", 1)
 
-    streammux.set_property("width", 1920)
-    streammux.set_property("height", 1080)
-    streammux.set_property("batch-size", 1)
-    streammux.set_property("batched-push-timeout", 4000000)
 
-    if gie=="nvinfer":
-        pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
-    else:
-        pgie.set_property("config-file-path", "dstest1_pgie_inferserver_config.txt")
+    pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
 
 
     pgie_batch_size = pgie.get_property("batch-size")
@@ -372,7 +377,7 @@ def main(args):
     factory = GstRtspServer.RTSPMediaFactory.new()
     factory.set_launch(
         '( udpsrc name=pay0 port=%d buffer-size=524288 caps="application/x-rtp, media=video, clock-rate=90000, encoding-name=(string)%s, payload=96 " )'
-        % (updsink_port_num, codec)
+        % (updsink_port_num, 'H264')
     )
     factory.set_shared(True)
     server.get_mount_points().add_factory("/ds-test", factory)
@@ -394,30 +399,37 @@ def main(args):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='RTSP Output Sample Application Help ')
-    parser.add_argument("-i", "--input",
-                  help="Path to input H264 elementry stream", nargs="+", default=["a"], required=True)
-    parser.add_argument("-g", "--gie", default="nvinfer",
-                  help="choose GPU inference engine type nvinfer or nvinferserver , default=nvinfer", choices=['nvinfer','nvinferserver'])
-    parser.add_argument("-c", "--codec", default="H264",
-                  help="RTSP Streaming Codec H264/H265 , default=H264", choices=['H264','H265'])
-    parser.add_argument("-b", "--bitrate", default=4000000,
-                  help="Set the encoding bitrate ", type=int)
-    # Check input arguments
-    if len(sys.argv)==1:
-        parser.print_help(sys.stderr)
-        sys.exit(1)
-    args = parser.parse_args()
-    global codec
+    global codec 
+    codec = "H264"
     global bitrate
+    bitrate = 4000000
     global stream_path
+    stream_path = ["a"]
     global gie
-    gie = args.gie
-    codec = args.codec
-    bitrate = args.bitrate
-    stream_path = args.input
+    gie = "nvinfer"
     return stream_path
 
+class VideoCenter:
+    def __init__(self) -> None:
+        self.uris = list()
+        for i in range(2):
+            self.uris.append('')
+        self.uris[0] = "rtsp://admin:a@192.168.1.84"
+        self.uris[1] = "rtsp://admin:a@192.168.1.82"
+        # self.uris[2] = "rtsp://admin:a@192.168.1.83"
+        # self.uris[3] = "rtsp://admin:a@192.168.1.84"
+        # self.uris[4] = "rtsp://admin:a@192.168.1.85"
+        # self.uris[5] = "rtsp://admin:a@192.168.1.86"
+
+    def StartStop(self, cameras):
+        for i in range(6):
+            if cameras[i]:
+                pass
+            else:
+                pass
+
+
 if __name__ == '__main__':
-    stream_path = parse_args()
-    sys.exit(main(stream_path))
+    videoCenter = VideoCenter()
+    main(videoCenter.uris)
+    videoCenter.StartStop([True, False, False, False, False, False])
