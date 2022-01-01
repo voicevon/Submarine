@@ -259,6 +259,22 @@ def make_nvvidconv_post():
         sys.stderr.write(" Unable to create nvvidconv_postosd \n")
     return nvvidconv_postosd    
 
+def make_caps():
+    # Create a caps filter
+    caps = Gst.ElementFactory.make("capsfilter", "filter")
+    caps.set_property(
+        "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
+    )
+    return caps
+
+def make_rtppay():
+    # Make the payload-encode video into RTP packets
+    rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
+    print("Creating H264 rtppay")
+    if not rtppay:
+        sys.stderr.write(" Unable to create rtppay")
+    return rtppay
+    
 def make_encoder():
     # Make the encoder
     print("Creating H264 Encoder")
@@ -270,6 +286,19 @@ def make_encoder():
     encoder.set_property("insert-sps-pps", 1)
     encoder.set_property("bufapi-version", 1)
     return encoder
+
+def make_nvtransform():
+    transform = Gst.ElementFactory.make("nvegltransform","nvegltransform")
+    if not transform:
+        sys.stderr.write("  Unable to create nvegltransform")
+    return transform
+
+
+def make_nveglglessink():
+    sink=Gst.ElementFactory.make("nveglglessink","nveglglesink")
+    if not sink:
+        sys.stderr.write("  Unable to create nveglglessink")
+    return sink
 
 def make_udp_sink(updsink_port_num):
     # Make the UDP sink
@@ -326,37 +355,22 @@ def main(uris):
             sys.stderr.write("Unable to create src pad bin \n")
         srcpad.link(sinkpad)
 
-    pgie = make_pgie(number_sources)
+    # pgie = make_pgie(number_sources)
     tiler = make_tiler(number_sources)
     nvvidconv = make_nvvidconv()
     nvosd = make_nvosd()
     nvvidconv_postosd = make_nvvidconv_post()
-
-
-    # Create a caps filter
-    caps = Gst.ElementFactory.make("capsfilter", "filter")
-    caps.set_property(
-        "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
-    )
+    caps = make_caps()
     encoder = make_encoder()
+    rtppay =make_rtppay()
 
-    # Make the payload-encode video into RTP packets
-    rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
-    print("Creating H264 rtppay")
-    if not rtppay:
-        sys.stderr.write(" Unable to create rtppay")
     updsink_port_num = 5400
-
     sink = make_udp_sink(updsink_port_num)
-    
-
-
-
+    transform = make_nvtransform()
+    nvsink = make_nveglglessink()
 
     print("Adding elements to Pipeline \n")
-
-
-    pipeline.add(pgie)
+    # pipeline.add(pgie)
     pipeline.add(tiler)
     pipeline.add(nvvidconv)
     pipeline.add(nvosd)
@@ -364,17 +378,33 @@ def main(uris):
     pipeline.add(caps)
     pipeline.add(encoder)
     pipeline.add(rtppay)
-    pipeline.add(sink)
+    # pipeline.add(sink)
+    pipeline.add(transform)
+    pipeline.add(nvsink)
 
-    streammux.link(pgie)
-    pgie.link(nvvidconv)
+    # streammux.link(pgie)
+    # pgie.link(nvvidconv)
+    # nvvidconv.link(tiler)
+    # tiler.link(nvosd)
+    # nvosd.link(nvvidconv_postosd)
+    # nvvidconv_postosd.link(caps)
+    # caps.link(encoder)
+    # encoder.link(rtppay)
+    # rtppay.link(sink)
+
+    streammux.link(nvvidconv)
+    # pgie.link(nvvidconv)
     nvvidconv.link(tiler)
     tiler.link(nvosd)
-    nvosd.link(nvvidconv_postosd)
-    nvvidconv_postosd.link(caps)
-    caps.link(encoder)
-    encoder.link(rtppay)
-    rtppay.link(sink)
+    nvosd.link(transform)
+    transform.link(nvsink)
+    
+    # nvosd.link(nvvidconv_postosd)
+    # nvvidconv_postosd.link(caps)
+    # nvosd.link(caps)
+    # caps.link(encoder)
+    # encoder.link(rtppay)
+    # rtppay.link(sink)
 
     # create an event loop and feed gstreamer bus mesages to it
     loop = GObject.MainLoop()
@@ -428,13 +458,13 @@ def set_global_var():
 class VideoCenter:
     def __init__(self) -> None:
         self.uris = list()
-        for i in range(2):
+        for i in range(5):
             self.uris.append('')
-        self.uris[0] = "rtsp://admin:a@192.168.1.84"
+        self.uris[0] = "rtsp://admin:a@192.168.1.81"
         self.uris[1] = "rtsp://admin:a@192.168.1.82"
-        # self.uris[2] = "rtsp://admin:a@192.168.1.83"
-        # self.uris[3] = "rtsp://admin:a@192.168.1.84"
-        # self.uris[4] = "rtsp://admin:a@192.168.1.85"
+        self.uris[2] = "rtsp://admin:a@192.168.1.83"
+        self.uris[3] = "rtsp://admin:a@192.168.1.84"
+        self.uris[4] = "rtsp://admin:a@192.168.1.86"
         # self.uris[5] = "rtsp://admin:a@192.168.1.86"
 
     def StartStop(self, cameras):
