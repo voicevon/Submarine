@@ -1,21 +1,7 @@
 #!/usr/bin/env python3
+# cd ~/Sumbrine/camera
+# python3 test3.py rtsp://admin:a@192.168.1.81:554 rtsp://admin:a@192.168.1.82 rtsp://admin:a@192.168.1.83   rtsp://admin:a@192.168.1.84 rtsp://admin:a@192.168.1.86
 
-################################################################################
-# SPDX-FileCopyrightText: Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-################################################################################
 
 import sys
 sys.path.append('../')
@@ -293,23 +279,25 @@ def main(args):
     pipeline.add(sink)
 
     print("Linking elements in the Pipeline \n")
-    streammux.link(queue1)
+    # streammux.link(queue1)
     # queue1.link(pgie)
     # pgie.link(queue2)
     # queue2.link(tiler)
+    # tiler.link(queue3)
+    # queue3.link(nvvidconv)
+    # nvvidconv.link(queue4)
+    # queue4.link(nvosd)
+    # nvosd.link(queue5)
+    # queue5.link(transform)
+    # transform.link(sink)
 
-    queue1.link(tiler)
-    tiler.link(queue3)
-    queue3.link(nvvidconv)
-    nvvidconv.link(queue4)
-    queue4.link(nvosd)
-    if is_aarch64():
-        nvosd.link(queue5)
-        queue5.link(transform)
-        transform.link(sink)
-    else:
-        nvosd.link(queue5)
-        queue5.link(sink)   
+
+    streammux.link(tiler)
+    # pgie.link(tiler)
+    tiler.link(nvvidconv)
+    nvvidconv.link(nvosd)
+    nvosd.link(transform)
+    transform.link(sink)
 
     # create an event loop and feed gstreamer bus mesages to it
     loop = GObject.MainLoop()
