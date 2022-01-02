@@ -18,7 +18,7 @@ Gst.init(sys.argv[1:])
 
 # build the pipeline
 pipeline = Gst.parse_launch(
-    "playbin uri=rtsp://admin:123456@192.168.123.10:554/h265/ch1/main/av_stream latency=10"
+    "playbin uri=rtsp://admin:a@192.168.1.81:554"
 )
 
 # start playing
