@@ -36,7 +36,7 @@ TILED_OUTPUT_WIDTH=1280
 TILED_OUTPUT_HEIGHT=720
 GST_CAPS_FEATURES_NVMM="memory:NVMM"
 OSD_PROCESS_MODE= 0
-OSD_DISPLAY_TEXT= 0
+OSD_DISPLAY_TEXT= 1
 pgie_classes_str= ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 
 # tiler_sink_pad_buffer_probe  will extract metadata received on OSD sink pad
@@ -172,6 +172,7 @@ def make_streammux(number_sources):
     streammux=Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
     if not streammux:
         sys.stderr.write(" Unable to create NvStreamMux \n")
+    streammux.set_property('live-source', 1)
     streammux.set_property("width", 1920)
     streammux.set_property("height", 1080)
     streammux.set_property("batch-size", number_sources)
@@ -222,6 +223,8 @@ def make_nvosd():
     nvosd=Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
     if not nvosd:
         sys.stderr.write(" Unable to create nvosd \n")
+    nvosd.set_property('process-mode',OSD_PROCESS_MODE)
+    nvosd.set_property('display-text',OSD_DISPLAY_TEXT)        
     return nvosd
 
 def make_nvvidconv_post():
@@ -347,7 +350,7 @@ def main(uris, finnal_sink):
             sys.stderr.write("Unable to create src pad bin \n")
         srcpad.link(sinkpad)
 
-    # pgie=make_pgie(number_sources)
+    pgie=make_pgie(number_sources)
     tiler=make_tiler(number_sources)
     nvvidconv=make_nvvidconv()
 
@@ -369,7 +372,7 @@ def main(uris, finnal_sink):
         pipeline.add(nvsink)
         pipeline.add(nvosd)
         pipeline.add(transform)
-        if True:
+        if False:
             pipeline.add(q1)
             pipeline.add(q2)
             pipeline.add(q3)
@@ -443,6 +446,12 @@ def main(uris, finnal_sink):
     bus = pipeline.get_bus()
     bus.add_signal_watch()
     bus.connect ("message", bus_call, loop)
+
+    tiler_src_pad=pgie.get_static_pad("src")
+    if not tiler_src_pad:
+        sys.stderr.write(" Unable to get src pad \n")
+    else:
+        tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, tiler_src_pad_buffer_probe, 0)
 
     if finnal_sink == "RTSP":
         # Start streaming
