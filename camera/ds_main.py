@@ -358,11 +358,6 @@ def main(uris, finnal_sink):
     # pipeline.add(pgie)
     pipeline.add(tiler)
     pipeline.add(nvvidconv)
-    q1 = Gst.ElementFactory.make("queue","q1")
-    q2 = Gst.ElementFactory.make("queue","q2")
-    q3 = Gst.ElementFactory.make("queue","q3")
-    q4 = Gst.ElementFactory.make("queue","q4")
-    q5 = Gst.ElementFactory.make("queue","q5")
 
     if finnal_sink == 'SCREEN':
         nvosd = make_nvosd()
@@ -372,33 +367,15 @@ def main(uris, finnal_sink):
         pipeline.add(nvsink)
         pipeline.add(nvosd)
         pipeline.add(transform)
-        if False:
-            pipeline.add(q1)
-            pipeline.add(q2)
-            pipeline.add(q3)
-            pipeline.add(q4)
-            pipeline.add(q5)
-
-            streammux.link(q1)
-            q1.link(tiler)
-            tiler.link(q2)
-            q2.link(nvvidconv)
-            nvvidconv.link(q3)
-            q3.link(nvosd)
-            nvosd.link(q4)
-            q4.link(transform)
-            transform.link(q5)
-            q5.link(nvsink)
-
-        else:
-            streammux.link(tiler)
-            tiler.link(nvvidconv)
-            nvvidconv.link(nvosd)
-            nvosd.link(transform)
-            transform.link(nvsink)
+        streammux.link(tiler)
+        tiler.link(nvvidconv)
+        nvvidconv.link(nvosd)
+        nvosd.link(transform)
+        transform.link(nvsink)
 
     if finnal_sink == "RTSP":
         updsink_port_num=5400
+        nvosd = make_nvosd()
         nvvidconv_postosd=make_nvvidconv_post()
         caps=make_caps()
         encoder=make_encoder()        
@@ -520,3 +497,5 @@ if __name__ == '__main__':
     set_global_var()
     videoCenter=VideoCenter()
     sys.exit(main(videoCenter.uris, "SCREEN"))
+    # sys.exit(main(videoCenter.uris, "FILE"))
+    # sys.exit(main(videoCenter.uris, "RTSP"))
