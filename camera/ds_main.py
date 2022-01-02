@@ -384,7 +384,8 @@ def main(uris, finnal_sink):
 
     if finnal_sink == "RTSP":
         updsink_port_num=5400
-        nvosd = make_nvosd()
+        transform = make_nvtransform()
+
         nvvidconv_postosd=make_nvvidconv_post()
         caps=make_caps()
         encoder=make_encoder()        
@@ -392,7 +393,7 @@ def main(uris, finnal_sink):
         rtppay =make_rtppay()
         udp_sink=make_udp_sink(updsink_port_num)
 
-        pipeline.add(nvosd)
+        pipeline.add(transform)
         pipeline.add(nvvidconv_postosd)
         pipeline.add(caps)
         pipeline.add(encoder)
@@ -401,13 +402,10 @@ def main(uris, finnal_sink):
         pipeline.add(udp_sink)
 
         streammux.link(nvvidconv)
-        # pgie.link(nvvidconv)
         nvvidconv.link(tiler)
-        tiler.link(nvosd)
-        nvosd.link(nvvidconv_postosd)
+        tiler.link(nvvidconv_postosd)
         nvvidconv_postosd.link(caps)
         caps.link(encoder)
-        # nvosd.link(encoder)
         encoder.link(rtppay)
         rtppay.link(udp_sink)
 
