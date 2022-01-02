@@ -364,9 +364,10 @@ def main(uris, finnal_sink):
         transform = make_nvtransform()
         nvsink = make_nveglglessink()
 
-        pipeline.add(nvsink)
         pipeline.add(nvosd)
         pipeline.add(transform)
+        pipeline.add(nvsink)
+
         streammux.link(tiler)
         tiler.link(nvvidconv)
         nvvidconv.link(nvosd)
@@ -383,6 +384,7 @@ def main(uris, finnal_sink):
         rtppay =make_rtppay()
         udp_sink=make_udp_sink(updsink_port_num)
 
+        pipeline.add(nvosd)
         pipeline.add(nvvidconv_postosd)
         pipeline.add(caps)
         pipeline.add(encoder)
@@ -390,7 +392,7 @@ def main(uris, finnal_sink):
         pipeline.add(rtppay)
         pipeline.add(udp_sink)
 
-        # streammux.link(pgie)
+        streammux.link(nvvidconv)
         # pgie.link(nvvidconv)
         nvvidconv.link(tiler)
         tiler.link(nvosd)
@@ -399,6 +401,16 @@ def main(uris, finnal_sink):
         caps.link(encoder)
         encoder.link(rtppay)
         rtppay.link(udp_sink)
+
+        # streammux.link(pgie)
+        # pgie.link(nvvidconv)
+        # nvvidconv.link(tiler)
+        # tiler.link(nvosd)
+        # nvosd.link(nvvidconv_postosd)
+        # nvvidconv_postosd.link(caps)
+        # caps.link(encoder)
+        # encoder.link(rtppay)
+        # rtppay.link(sink)
 
     if finnal_sink == "FILE":
         mp4mux=make_mp4mux()
@@ -496,6 +508,6 @@ class VideoCenter:
 if __name__ == '__main__':
     set_global_var()
     videoCenter=VideoCenter()
-    sys.exit(main(videoCenter.uris, "SCREEN"))
+    # sys.exit(main(videoCenter.uris, "SCREEN"))
     # sys.exit(main(videoCenter.uris, "FILE"))
-    # sys.exit(main(videoCenter.uris, "RTSP"))
+    sys.exit(main(videoCenter.uris, "RTSP"))
