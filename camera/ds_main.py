@@ -275,11 +275,19 @@ def make_mp4mux():
         sys.stderr.write("  Unable to create mp4mux")
     return mux
 
+def make_mkvmux():
+    print("Creating mkvmux")
+    mux=Gst.ElementFactory.make("matroskamux","matroskamux")
+    if not mux:
+        sys.stderr.write("  Unable to create matroskamux")
+    return mux
+
+
 def make_h264parse():
     print("Creating H264 parse")
-    parse=Gst.ElementFactory.make("nvv4l2h265enc","nvv4l2h265enc")
+    parse=Gst.ElementFactory.make("nvv4l2h264enc","nvv4l2h264enc")
     if not parse:
-        sys.stderr.write("  Unable to create nvv4l2h265enc")
+        sys.stderr.write("  Unable to create nvv4l2h264enc")
     return parse
 
 def make_nveglglessink():
@@ -399,23 +407,29 @@ def main(uris, finnal_sink):
         nvosd.link(nvvidconv_postosd)
         nvvidconv_postosd.link(caps)
         caps.link(encoder)
+        # nvosd.link(encoder)
         encoder.link(rtppay)
         rtppay.link(udp_sink)
 
-        # streammux.link(pgie)
-        # pgie.link(nvvidconv)
-        # nvvidconv.link(tiler)
-        # tiler.link(nvosd)
-        # nvosd.link(nvvidconv_postosd)
-        # nvvidconv_postosd.link(caps)
-        # caps.link(encoder)
-        # encoder.link(rtppay)
-        # rtppay.link(sink)
-
     if finnal_sink == "FILE":
-        mp4mux=make_mp4mux()
-        filesink=make_file_sink("abc.mp4")
-        pipeline.add(mp4mux)
+        nvosd = make_nvosd()
+        nvvidconv_postosd=make_nvvidconv_post()
+        caps=make_caps()
+        encoder=make_encoder()        
+        parse=make_h264parse()
+        # mp4mux=make_mp4mux()
+        # filesink=make_file_sink("abc.mp4")
+        mkvmux = make_mkvmux()
+        filesink=make_file_sink("abc.mkv")
+
+        pipeline.add(nvosd)
+        pipeline.add(nvvidconv_postosd)
+        pipeline.add(caps)
+        pipeline.add(encoder)
+        pipeline.add(parse)
+        # pipeline.add(mp4mux)
+
+        pipeline.add(mkvmux)
         pipeline.add(filesink)
 
         streammux.link(nvvidconv)
@@ -426,8 +440,11 @@ def main(uris, finnal_sink):
         nvvidconv_postosd.link(caps)
         caps.link(encoder)
         encoder.link(parse)
-        parse.link(mp4mux)
-        mp4mux.link(filesink)
+        # parse.link(mp4mux)
+        # mp4mux.link(filesink)
+        parse.link(mkvmux)
+        mkvmux.link(filesink)
+
 
 
     # create an event loop and feed gstreamer bus mesages to it
