@@ -431,9 +431,9 @@ def main(uris, finnal_sink):
         pipeline.add(mkvmux)
         pipeline.add(filesink)
 
-        streammux.link(nvvidconv)
+        a = streammux.link(nvvidconv)
         # pgie.link(nvvidconv)
-        nvvidconv.link(tiler)
+        b =nvvidconv.link(tiler)
         tiler.link(nvosd)
         nvosd.link(transform)
         # nvosd.link(nvvidconv_postosd)

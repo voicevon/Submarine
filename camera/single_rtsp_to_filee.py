@@ -7,10 +7,7 @@ import sys
 sys.path.append("../")
 import pyds
 from common.bus_call import bus_call
-# from common.is_aarch_64 import is_aarch64
-# import platform
 import math
-import time
 from ctypes import *
 import gi
 gi.require_version("Gst", "1.0")
@@ -249,17 +246,7 @@ def make_rtppay():
         sys.stderr.write(" Unable to create rtppay")
     return rtppay
     
-def make_encoder():
-    # Make the encoder
-    print("Creating H264 Encoder")
-    encoder=Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
-    if not encoder:
-        sys.stderr.write(" Unable to create encoder")
-    encoder.set_property("bitrate", bitrate)
-    encoder.set_property("preset-level", 1)
-    encoder.set_property("insert-sps-pps", 1)
-    encoder.set_property("bufapi-version", 1)
-    return encoder
+
 
 def make_nvtransform():
     print("Creating nvtransform")
@@ -275,20 +262,39 @@ def make_mp4mux():
         sys.stderr.write("  Unable to create mp4mux")
     return mux
 
+def make_encoder():
+    # Make the encoder
+    print("Creating H265 Encoder")
+    encoder=Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
+    if not encoder:
+        sys.stderr.write(" Unable to create encoder")
+    # encoder.set_property("bitrate", bitrate)
+    # encoder.set_property("preset-level", 1)
+    # encoder.set_property("insert-sps-pps", 1)
+    # encoder.set_property("bufapi-version", 1)
+    return encoder
+
+def make_h264parse():
+    print("Creating H265 parse")
+    parse=Gst.ElementFactory.make("h265parse","parse")
+    if not parse:
+        sys.stderr.write("  Unable to create parse")
+    return parse
+
 def make_mkvmux():
-    print("Creating mkvmux")
+    print("Creating mkvmux")    
     mux=Gst.ElementFactory.make("matroskamux","matroskamux")
     if not mux:
         sys.stderr.write("  Unable to create matroskamux")
     return mux
 
-
-def make_h264parse():
-    print("Creating H264 parse")
-    parse=Gst.ElementFactory.make("nvv4l2h265enc","nvv4l2h265enc")
-    if not parse:
-        sys.stderr.write("  Unable to create nvv4l2h264enc")
-    return parse
+def make_file_sink(filename):
+    print("Creating filesink")
+    sink=Gst.ElementFactory.make("filesink", "filesink")
+    if not sink:
+        sys.stderr.write("  Unable to create filesink")
+    sink.set_property("location",filename)
+    return sink
 
 def make_nveglglessink():
     print("Creating nveglessink")
@@ -311,13 +317,7 @@ def make_udp_sink(updsink_port_num):
     sink.set_property("qos", 0)
     return sink
     
-def make_file_sink(filename):
-    print("Creating filesink")
-    sink=Gst.ElementFactory.make("filesink", "filesink")
-    if not sink:
-        sys.stderr.write("  Unable to create filesink")
-    sink.set_property("location",filename)
-    return sink
+
 
 def main(uris, finnal_sink):
     # Check input arguments
@@ -329,122 +329,59 @@ def main(uris, finnal_sink):
     GObject.threads_init()
     Gst.init(None)
 
-    # Create gstreamer elements */
     # Create Pipeline element that will form a connection of other elements
     print("Creating Pipeline \n ")
     pipeline = Gst.Pipeline()
-    is_live = False
-
     if not pipeline:
         sys.stderr.write(" Unable to create Pipeline \n")
 
-    streammux=make_streammux(number_sources)
-    pipeline.add(streammux)
-    for i in range(number_sources):
-        print("Creating source_bin ",i," \n ")
-        uri_name=uris[i]
-        if uri_name.find("rtsp://") == 0 :
-            is_live = True
-        source_bin=create_source_bin(i, uri_name)
-        if not source_bin:
-            sys.stderr.write("Unable to create source bin \n")
-        pipeline.add(source_bin)
-        padname="sink_%u" %i
-        sinkpad= streammux.get_request_pad(padname)
-        if not sinkpad:
-            sys.stderr.write("Unable to create sink pad bin \n")
-        srcpad=source_bin.get_static_pad("src")
-        if not srcpad:
-            sys.stderr.write("Unable to create src pad bin \n")
-        srcpad.link(sinkpad)
-
-    pgie=make_pgie(number_sources)
-    tiler=make_tiler(number_sources)
-    nvvidconv=make_nvvidconv()
-
     print("Adding elements to Pipeline \n")
     # pipeline.add(pgie)
-    pipeline.add(tiler)
-    pipeline.add(nvvidconv)
 
     if finnal_sink == 'SCREEN':
         nvosd = make_nvosd()
         transform = make_nvtransform()
         nvsink = make_nveglglessink()
 
+        pipeline.add(nvvidconv)
+        # pipeline.add(uri_decode_bin)
         pipeline.add(nvosd)
         pipeline.add(transform)
         pipeline.add(nvsink)
 
-        streammux.link(tiler)
-        tiler.link(nvvidconv)
+        # uri_decode_bin.link(nvvidconv)
         nvvidconv.link(nvosd)
         nvosd.link(transform)
         transform.link(nvsink)
 
-    if finnal_sink == "RTSP":
-        updsink_port_num=5400
-        transform = make_nvtransform()
-
-        nvvidconv_postosd=make_nvvidconv_post()
-        caps=make_caps()
-        encoder=make_encoder()        
-        parse=make_h264parse()
-        rtppay =make_rtppay()
-        udp_sink=make_udp_sink(updsink_port_num)
-
-        pipeline.add(transform)
-        pipeline.add(nvvidconv_postosd)
-        pipeline.add(caps)
-        pipeline.add(encoder)
-        pipeline.add(parse)
-        pipeline.add(rtppay)
-        pipeline.add(udp_sink)
-
-        streammux.link(nvvidconv)
-        nvvidconv.link(tiler)
-        tiler.link(nvvidconv_postosd)
-        nvvidconv_postosd.link(caps)
-        caps.link(encoder)
-        encoder.link(rtppay)
-        rtppay.link(udp_sink)
-
     if finnal_sink == "FILE":
-        nvosd = make_nvosd()
-        transform = make_nvtransform()
-        nvvidconv_postosd=make_nvvidconv_post()
-        caps=make_caps()
+        # command = ("uridecodebin uri=rtsp://admin:a@192.168.1.81 ! "
+#     "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=cam1.mkv")
+        uri_decode_bin = Gst.ElementFactory.make("uridecodebin", "uri-decode-bin")
+        if not uri_decode_bin:
+            sys.stderr.write("   Unable to create uridecodebin")
+        uri_decode_bin.set_property("uri","rtsp://admin:a@192.168.1.82")
+        nvvidconv=make_nvvidconv()
         encoder=make_encoder()        
         parse=make_h264parse()
-        # mp4mux=make_mp4mux()
-        # filesink=make_file_sink("abc.mp4")
         mkvmux = make_mkvmux()
-        filesink=make_file_sink("abc.mkv")
+        filesink=make_file_sink("cam81.mkv")
 
-        pipeline.add(nvosd)
-        pipeline.add(transform)
-        pipeline.add(nvvidconv_postosd)
-        pipeline.add(caps)
+        pipeline.add(uri_decode_bin)
+        pipeline.add(nvvidconv)
         pipeline.add(encoder)
         pipeline.add(parse)
-        # pipeline.add(mp4mux)
         pipeline.add(mkvmux)
         pipeline.add(filesink)
 
-        streammux.link(nvvidconv)
-        # pgie.link(nvvidconv)
-        nvvidconv.link(tiler)
-        tiler.link(nvosd)
-        nvosd.link(transform)
-        # nvosd.link(nvvidconv_postosd)
-        # nvvidconv_postosd.link(caps)
-        # caps.link(encoder)
-        transform.link(encoder)
-        encoder.link(parse)
-        # parse.link(mp4mux)
-        # mp4mux.link(filesink)
-        parse.link(mkvmux)
-        mkvmux.link(filesink)
+        a = uri_decode_bin.link(nvvidconv)
+        if not a:
+            print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        b= nvvidconv.link(encoder)
+        c=encoder.link(parse)
+        d=parse.link(mkvmux)
+        e=mkvmux.link(filesink)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   ",a,b,c,d,e)
 
 
 
@@ -454,32 +391,9 @@ def main(uris, finnal_sink):
     bus.add_signal_watch()
     bus.connect ("message", bus_call, loop)
 
-    tiler_src_pad=pgie.get_static_pad("src")
-    if not tiler_src_pad:
-        sys.stderr.write(" Unable to get src pad \n")
-    else:
-        tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, tiler_src_pad_buffer_probe, 0)
 
-    if finnal_sink == "RTSP":
-        # Start streaming
-        rtsp_port_num=8554
 
-        server=GstRtspServer.RTSPServer.new()
-        server.props.service="%d" % rtsp_port_num
-        server.attach(None)
 
-        factory=GstRtspServer.RTSPMediaFactory.new()
-        factory.set_launch(
-            '( udpsrc name=pay0 port=%d buffer-size=524288 caps="application/x-rtp, media=video, clock-rate=90000, encoding-name=(string)%s, payload=96 " )'
-            % (updsink_port_num, codec)
-        )
-        factory.set_shared(True)
-        server.get_mount_points().add_factory("/ds-test", factory)
-
-        print(
-            "\n *** DeepStream: Launched RTSP Streaming at rtsp://localhost:%d/ds-test ***\n\n"
-            % rtsp_port_num
-        )
 
     # start play back and listen to events
     print("Starting pipeline \n")
@@ -507,13 +421,14 @@ def set_global_var():
 class VideoCenter:
     def __init__(self) -> None:
         self.uris=list()
-        for i in range(5):
+        for i in range(1):
             self.uris.append('')
+        # self.uris[0]="rtsp://admin:a@192.168.1.81:554/h265/ch1/main/av_stream"
         self.uris[0]="rtsp://admin:a@192.168.1.81"
-        self.uris[1]="rtsp://admin:a@192.168.1.82"
-        self.uris[2]="rtsp://admin:a@192.168.1.83"
-        self.uris[3]="rtsp://admin:a@192.168.1.84"
-        self.uris[4]="rtsp://admin:a@192.168.1.86"
+        # self.uris[1]="rtsp://admin:a@192.168.1.82"
+        # self.uris[2]="rtsp://admin:a@192.168.1.83"
+        # self.uris[3]="rtsp://admin:a@192.168.1.84"
+        # self.uris[4]="rtsp://admin:a@192.168.1.86"
         # self.uris[5]="rtsp://admin:a@192.168.1.86"
 
     def StartStop(self, cameras):
