@@ -42,6 +42,9 @@ pgie_classes_str =  ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 # tiler_sink_pad_buffer_probe  will extract metadata received on OSD sink pad
 # and update params for drawing rectangle, object information etc.
 class VideoCenter:
+    pipeline = Gst.Pipeline()
+    recording_start_at = 0
+
     def __init__(self) -> None:
         self.uris = list()
         for i in range(5):
@@ -147,7 +150,7 @@ class VideoCenter:
     def decodebin_child_added(child_proxy,Object,name,user_data):
         print("Decodebin child added:", name, "\n")
         if(name.find("decodebin") !=  -1):
-            Object.connect("child-added",decodebin_child_added,user_data)
+            Object.connect("child-added",VideoCenter.decodebin_child_added,user_data)
 
     @staticmethod
     def create_source_bin(index,uri):
@@ -370,20 +373,20 @@ class VideoCenter:
         # Create gstreamer elements */
         # Create Pipeline element that will form a connection of other elements
         print("Creating Pipeline \n ")
-        pipeline = Gst.Pipeline()
+        # pipeline = Gst.Pipeline()
 
-        if not pipeline:
+        if not VideoCenter.pipeline:
             sys.stderr.write(" Unable to create Pipeline \n")
 
         streammux = VideoCenter.make_streammux(number_sources)
-        pipeline.add(streammux)
+        VideoCenter.pipeline.add(streammux)
         for i in range(number_sources):
             print("Creating source_bin ",i," \n ")
             uri_name = uris[i]
             source_bin = VideoCenter.create_source_bin(i, uri_name)
             if not source_bin:
                 sys.stderr.write("Unable to create source bin \n")
-            pipeline.add(source_bin)
+            VideoCenter.pipeline.add(source_bin)
             padname = "sink_%u" %i
             sinkpad =  streammux.get_request_pad(padname)
             if not sinkpad:
@@ -399,17 +402,17 @@ class VideoCenter:
 
         print("Adding elements to Pipeline \n")
         # pipeline.add(pgie)
-        pipeline.add(tiler)
-        pipeline.add(nvvidconv)
+        VideoCenter.pipeline.add(tiler)
+        VideoCenter.pipeline.add(nvvidconv)
 
         if finnal_sink == 'SCREEN':
             nvosd = VideoCenter.make_nvosd()
             transform = VideoCenter.make_nvtransform()
             nvsink = VideoCenter.make_nveglglessink()
 
-            pipeline.add(nvosd)
-            pipeline.add(transform)
-            pipeline.add(nvsink)
+            VideoCenter.pipeline.add(nvosd)
+            VideoCenter.pipeline.add(transform)
+            VideoCenter.pipeline.add(nvsink)
 
             streammux.link(tiler)
             tiler.link(nvvidconv)
@@ -428,13 +431,13 @@ class VideoCenter:
             rtppay  = VideoCenter.make_rtppay()
             udp_sink = VideoCenter.make_udp_sink(updsink_port_num)
 
-            pipeline.add(transform)
-            pipeline.add(nvvidconv_postosd)
-            pipeline.add(caps)
-            pipeline.add(encoder)
-            pipeline.add(parse)
-            pipeline.add(rtppay)
-            pipeline.add(udp_sink)
+            VideoCenter.pipeline.add(transform)
+            VideoCenter.pipeline.add(nvvidconv_postosd)
+            VideoCenter.pipeline.add(caps)
+            VideoCenter.pipeline.add(encoder)
+            VideoCenter.pipeline.add(parse)
+            VideoCenter.pipeline.add(rtppay)
+            VideoCenter.pipeline.add(udp_sink)
 
             streammux.link(nvvidconv)
             nvvidconv.link(tiler)
@@ -456,15 +459,15 @@ class VideoCenter:
             mkvmux = VideoCenter.make_mkvmux()
             filesink = VideoCenter.make_file_sink("abc.mkv")
 
-            pipeline.add(nvosd)
-            pipeline.add(transform)
-            pipeline.add(nvvidconv_postosd)
-            pipeline.add(caps)
-            pipeline.add(encoder)
-            pipeline.add(parse)
+            VideoCenter.pipeline.add(nvosd)
+            VideoCenter.pipeline.add(transform)
+            VideoCenter.pipeline.add(nvvidconv_postosd)
+            VideoCenter.pipeline.add(caps)
+            VideoCenter.pipeline.add(encoder)
+            VideoCenter.pipeline.add(parse)
             # pipeline.add(mp4mux)
-            pipeline.add(mkvmux)
-            pipeline.add(filesink)
+            VideoCenter.pipeline.add(mkvmux)
+            VideoCenter.pipeline.add(filesink)
             a = streammux.link(nvvidconv)
             b = nvvidconv.link(tiler)
             c = tiler.link(nvvidconv_postosd)
@@ -483,7 +486,7 @@ class VideoCenter:
 
         # create an event loop and feed gstreamer bus mesages to it
         loop = GObject.MainLoop()
-        bus = pipeline.get_bus()
+        bus = VideoCenter.pipeline.get_bus()
         bus.add_signal_watch()
         bus.connect ("message", bus_call, loop)
 
@@ -513,22 +516,22 @@ class VideoCenter:
                 "\n *** DeepStream: Launched RTSP Streaming at rtsp://localhost:%d/ds-test ***\n\n"
                 % rtsp_port_num
             )
-
-        # start play back and listen to events
+    @staticmethod
+    def Start():
         print("Starting pipeline \n")
-        pipeline.set_state(Gst.State.PLAYING)
-        # try:
-        #     loop.run()
-        # except BaseException:
-        #     pass
-        # # cleanup
-        time.sleep(20)
-        pipeline.set_state(Gst.State.NULL)
+        VideoCenter.pipeline.set_state(Gst.State.PLAYING)
+        VideoCenter.recording_start_at = now
 
     @staticmethod
-    def test():
-        print("testing")
+    def Stop():
+        VideoCenter.pipeline.set_state(Gst.State.NULL)
 
+
+    def SpinOnce(self):
+        now = 100
+        start_timestamp = VideoCenter.recording_start_at
+        if now - start_timestamp > 120:
+            VideoCenter.Stop()
 
 if __name__ == '__main__':
     videoCenter = VideoCenter()
