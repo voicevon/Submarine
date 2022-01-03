@@ -100,7 +100,7 @@ class VideoCenter:
                     obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
                 except StopIteration:
                     break
-                obj_counter[obj_meta.class_id] + =  1
+                obj_counter[obj_meta.class_id] += 1
                 try:
                     l_obj = l_obj.next
                 except StopIteration:
@@ -144,10 +144,10 @@ class VideoCenter:
                 sys.stderr.write(" Error: Decodebin did not pick nvidia decoder plugin.\n")
 
     @staticmethod
-    def decodebin_child_added(cls,child_proxy,Object,name,user_data):
+    def decodebin_child_added(child_proxy,Object,name,user_data):
         print("Decodebin child added:", name, "\n")
         if(name.find("decodebin") !=  -1):
-            Object.connect("child-added",cls.decodebin_child_added,user_data)
+            Object.connect("child-added",decodebin_child_added,user_data)
 
     @staticmethod
     def create_source_bin(index,uri):
@@ -171,8 +171,8 @@ class VideoCenter:
         uri_decode_bin.set_property("uri",uri)
         # Connect to the "pad-added" signal of the decodebin which generates a
         # callback once a new pad for raw data has beed created by the decodebin
-        uri_decode_bin.connect("pad-added", cls.cb_newpad,nbin)
-        uri_decode_bin.connect("child-added", cls.decodebin_child_added,nbin)
+        uri_decode_bin.connect("pad-added", VideoCenter.cb_newpad,nbin)
+        uri_decode_bin.connect("child-added", VideoCenter.decodebin_child_added,nbin)
 
         # We need to create a ghost pad for the source bin which will act as a proxy
         # for the video decoder src pad. The ghost pad will not have a target right
@@ -357,7 +357,7 @@ class VideoCenter:
         return sink
 
     @staticmethod
-    def SpinBackground(cls,uris, finnal_sink):
+    def SpinBackground(uris, finnal_sink):
         # Check input arguments
         for i in range(0, len(uris)):
             fps_streams["stream{0}".format(i)] = GETFPS(i)
@@ -375,12 +375,12 @@ class VideoCenter:
         if not pipeline:
             sys.stderr.write(" Unable to create Pipeline \n")
 
-        streammux = cls.make_streammux(number_sources)
+        streammux = VideoCenter.make_streammux(number_sources)
         pipeline.add(streammux)
         for i in range(number_sources):
             print("Creating source_bin ",i," \n ")
             uri_name = uris[i]
-            source_bin = cls.create_source_bin(i, uri_name)
+            source_bin = VideoCenter.create_source_bin(i, uri_name)
             if not source_bin:
                 sys.stderr.write("Unable to create source bin \n")
             pipeline.add(source_bin)
@@ -393,9 +393,9 @@ class VideoCenter:
                 sys.stderr.write("Unable to create src pad bin \n")
             srcpad.link(sinkpad)
 
-        pgie = cls.make_pgie(number_sources)
-        tiler = cls.make_tiler(number_sources)
-        nvvidconv = cls.make_nvvidconv()
+        pgie = VideoCenter.make_pgie(number_sources)
+        tiler = VideoCenter.make_tiler(number_sources)
+        nvvidconv = VideoCenter.make_nvvidconv()
 
         print("Adding elements to Pipeline \n")
         # pipeline.add(pgie)
@@ -403,9 +403,9 @@ class VideoCenter:
         pipeline.add(nvvidconv)
 
         if finnal_sink == 'SCREEN':
-            nvosd = cls.make_nvosd()
-            transform = cls.make_nvtransform()
-            nvsink = cls.make_nveglglessink()
+            nvosd = VideoCenter.make_nvosd()
+            transform = VideoCenter.make_nvtransform()
+            nvsink = VideoCenter.make_nveglglessink()
 
             pipeline.add(nvosd)
             pipeline.add(transform)
@@ -419,14 +419,14 @@ class VideoCenter:
 
         if finnal_sink == "RTSP":
             updsink_port_num = 5400
-            transform = cls.make_nvtransform()
+            transform = VideoCenter.make_nvtransform()
 
-            nvvidconv_postosd = cls.make_nvvidconv_post()
-            caps = cls.make_caps()
-            encoder = cls.make_encoder()        
-            parse = cls.make_h264parse()
-            rtppay  = cls.make_rtppay()
-            udp_sink = cls.make_udp_sink(updsink_port_num)
+            nvvidconv_postosd = VideoCenter.make_nvvidconv_post()
+            caps = VideoCenter.make_caps()
+            encoder = VideoCenter.make_encoder()        
+            parse = VideoCenter.make_h264parse()
+            rtppay  = VideoCenter.make_rtppay()
+            udp_sink = VideoCenter.make_udp_sink(updsink_port_num)
 
             pipeline.add(transform)
             pipeline.add(nvvidconv_postosd)
@@ -445,16 +445,16 @@ class VideoCenter:
             rtppay.link(udp_sink)
 
         if finnal_sink == "FILE":
-            nvosd = cls.make_nvosd()
-            transform = cls.make_nvtransform()
-            nvvidconv_postosd = cls.make_nvvidconv_post()
-            caps = cls.make_caps()
-            encoder = cls.make_encoder()        
-            parse = cls.make_h264parse()
+            nvosd = VideoCenter.make_nvosd()
+            transform = VideoCenter.make_nvtransform()
+            nvvidconv_postosd = VideoCenter.make_nvvidconv_post()
+            caps = VideoCenter.make_caps()
+            encoder = VideoCenter.make_encoder()        
+            parse = VideoCenter.make_h264parse()
             # mp4mux = make_mp4mux()
             # filesink = make_file_sink("abc.mp4")
-            mkvmux = cls.make_mkvmux()
-            filesink = cls.make_file_sink("abc.mkv")
+            mkvmux = VideoCenter.make_mkvmux()
+            filesink = VideoCenter.make_file_sink("abc.mkv")
 
             pipeline.add(nvosd)
             pipeline.add(transform)
@@ -491,7 +491,7 @@ class VideoCenter:
         if not tiler_src_pad:
             sys.stderr.write(" Unable to get src pad \n")
         else:
-            tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, cls.tiler_src_pad_buffer_probe, 0)
+            tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, VideoCenter.tiler_src_pad_buffer_probe, 0)
 
         if finnal_sink == "RTSP":
             # Start streaming
@@ -525,12 +525,17 @@ class VideoCenter:
         time.sleep(20)
         pipeline.set_state(Gst.State.NULL)
 
+    @staticmethod
+    def test():
+        print("testing")
 
 
 if __name__ == '__main__':
     videoCenter = VideoCenter()
-    videoCenter.video_main(videoCenter.uris, "SCREEN")
-    while True:
-        pass
+    videoCenter.SpinBackground(videoCenter.uris, "SCREEN")
+    VideoCenter.test()
     # sys.exit(main(videoCenter.uris, "FILE"))
     # sys.exit(main(videoCenter.uris, "RTSP"))
+
+    while True:
+        pass
