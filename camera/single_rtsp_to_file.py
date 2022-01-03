@@ -374,14 +374,14 @@ def main(uris, finnal_sink):
         pipeline.add(mkvmux)
         pipeline.add(filesink)
 
-        a = uri_decode_bin.link(nvvidconv)
-        if not a:
-            print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        # a = uri_decode_bin.link(nvvidconv)
+        # if not a:
+        #     print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
         b= nvvidconv.link(encoder)
         c=encoder.link(parse)
         d=parse.link(mkvmux)
         e=mkvmux.link(filesink)
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   ",a,b,c,d,e)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   ",b,c,d,e)
 
 
 
