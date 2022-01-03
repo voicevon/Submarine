@@ -482,11 +482,12 @@ def main(uris, finnal_sink):
     # start play back and listen to events
     print("Starting pipeline \n")
     pipeline.set_state(Gst.State.PLAYING)
-    try:
-        loop.run()
-    except BaseException:
-        pass
-    # cleanup
+    # try:
+    #     loop.run()
+    # except BaseException:
+    #     pass
+    # # cleanup
+    time.sleep(20)
     pipeline.set_state(Gst.State.NULL)
 
 
@@ -524,6 +525,6 @@ class VideoCenter:
 if __name__ == '__main__':
     set_global_var()
     videoCenter=VideoCenter()
-    # sys.exit(main(videoCenter.uris, "SCREEN"))
-    sys.exit(main(videoCenter.uris, "FILE"))
+    sys.exit(main(videoCenter.uris, "SCREEN"))
+    # sys.exit(main(videoCenter.uris, "FILE"))
     # sys.exit(main(videoCenter.uris, "RTSP"))
