@@ -41,62 +41,80 @@ pgie_classes_str =  ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 
 # tiler_sink_pad_buffer_probe  will extract metadata received on OSD sink pad
 # and update params for drawing rectangle, object information etc.
+class VideoCenter:
+    def __init__(self) -> None:
+        self.uris = list()
+        for i in range(5):
+            self.uris.append('')
+        self.uris[0] = "rtsp://admin:a@192.168.1.81"
+        self.uris[1] = "rtsp://admin:a@192.168.1.82"
+        self.uris[2] = "rtsp://admin:a@192.168.1.83"
+        self.uris[3] = "rtsp://admin:a@192.168.1.84"
+        self.uris[4] = "rtsp://admin:a@192.168.1.86"
+        # self.uris[5] = "rtsp://admin:a@192.168.1.86"
 
+    def StartStop(self, cameras):
+        for i in range(6):
+            if cameras[i]:
+                pass
+            else:
+                pass
+    
+    @staticmethod
+    def tiler_src_pad_buffer_probe(pad,info,u_data):
+        frame_number = 0
+        num_rects = 0
+        gst_buffer = info.get_buffer()
+        if not gst_buffer:
+            print("Unable to get GstBuffer ")
+            return
 
-def tiler_src_pad_buffer_probe(pad,info,u_data):
-    frame_number = 0
-    num_rects = 0
-    gst_buffer = info.get_buffer()
-    if not gst_buffer:
-        print("Unable to get GstBuffer ")
-        return
-
-    # Retrieve batch metadata from the gst_buffer
-    # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
-    # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
-    batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
-    l_frame = batch_meta.frame_meta_list
-    while l_frame is not None:
-        try:
-            # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
-            # The casting is done by pyds.NvDsFrameMeta.cast()
-            # The casting also keeps ownership of the underlying memory
-            # in the C code, so the Python garbage collector will leave
-            # it alone.
-            frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
-        except StopIteration:
-            break
-
-        frame_number = frame_meta.frame_num
-        l_obj = frame_meta.obj_meta_list
-        num_rects = frame_meta.num_obj_meta
-        obj_counter = {
-            PGIE_CLASS_ID_VEHICLE:0,
-            PGIE_CLASS_ID_PERSON:0,
-            PGIE_CLASS_ID_BICYCLE:0,
-            PGIE_CLASS_ID_ROADSIGN:0
-        }
-        while l_obj is not None:
+        # Retrieve batch metadata from the gst_buffer
+        # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
+        # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
+        batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
+        l_frame = batch_meta.frame_meta_list
+        while l_frame is not None:
             try:
-                # Casting l_obj.data to pyds.NvDsObjectMeta
-                obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
+                # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
+                # The casting is done by pyds.NvDsFrameMeta.cast()
+                # The casting also keeps ownership of the underlying memory
+                # in the C code, so the Python garbage collector will leave
+                # it alone.
+                frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
             except StopIteration:
                 break
-            obj_counter[obj_meta.class_id] + =  1
+
+            frame_number = frame_meta.frame_num
+            l_obj = frame_meta.obj_meta_list
+            num_rects = frame_meta.num_obj_meta
+            obj_counter = {
+                PGIE_CLASS_ID_VEHICLE:0,
+                PGIE_CLASS_ID_PERSON:0,
+                PGIE_CLASS_ID_BICYCLE:0,
+                PGIE_CLASS_ID_ROADSIGN:0
+            }
+            while l_obj is not None:
+                try:
+                    # Casting l_obj.data to pyds.NvDsObjectMeta
+                    obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
+                except StopIteration:
+                    break
+                obj_counter[obj_meta.class_id] + =  1
+                try:
+                    l_obj = l_obj.next
+                except StopIteration:
+                    break
+            print("Frame Number = ", frame_number, "Number of Objects = ",num_rects,"Vehicle_count = ",obj_counter[PGIE_CLASS_ID_VEHICLE],"Person_count = ",obj_counter[PGIE_CLASS_ID_PERSON])
+
+            # Get frame rate through this probe
+            fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()
             try:
-                l_obj = l_obj.next
+                l_frame = l_frame.next
             except StopIteration:
                 break
-        print("Frame Number = ", frame_number, "Number of Objects = ",num_rects,"Vehicle_count = ",obj_counter[PGIE_CLASS_ID_VEHICLE],"Person_count = ",obj_counter[PGIE_CLASS_ID_PERSON])
 
-        # Get frame rate through this probe
-        fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()
-        try:
-            l_frame = l_frame.next
-        except StopIteration:
-            break
-
-    return Gst.PadProbeReturn.OK
+        return Gst.PadProbeReturn.OK
 
 
 
@@ -255,7 +273,7 @@ def make_encoder():
     encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
     if not encoder:
         sys.stderr.write(" Unable to create encoder")
-    encoder.set_property("bitrate", bitrate)
+    encoder.set_property("bitrate", 4000000)
     encoder.set_property("preset-level", 1)
     encoder.set_property("insert-sps-pps", 1)
     encoder.set_property("bufapi-version", 1)
@@ -466,7 +484,7 @@ def video_main(uris, finnal_sink):
         factory = GstRtspServer.RTSPMediaFactory.new()
         factory.set_launch(
             '( udpsrc name = pay0 port = %d buffer-size = 524288 caps = "application/x-rtp, media = video, clock-rate = 90000, encoding-name = (string)%s, payload = 96 " )'
-            % (updsink_port_num, codec)
+            % (updsink_port_num, "H264")
         )
         factory.set_shared(True)
         server.get_mount_points().add_factory("/ds-test", factory)
@@ -489,38 +507,10 @@ def video_main(uris, finnal_sink):
 
 
 
-def set_global_var():
-    global codec
-    global bitrate
-    global stream_path
-    global gie
-    gie = "nvinfer"
-    codec = "H264"
-    bitrate = 4000000
-    stream_path = ""
-    return stream_path    
 
-class VideoCenter:
-    def __init__(self) -> None:
-        self.uris = list()
-        for i in range(5):
-            self.uris.append('')
-        self.uris[0] = "rtsp://admin:a@192.168.1.81"
-        self.uris[1] = "rtsp://admin:a@192.168.1.82"
-        self.uris[2] = "rtsp://admin:a@192.168.1.83"
-        self.uris[3] = "rtsp://admin:a@192.168.1.84"
-        self.uris[4] = "rtsp://admin:a@192.168.1.86"
-        # self.uris[5] = "rtsp://admin:a@192.168.1.86"
 
-    def StartStop(self, cameras):
-        for i in range(6):
-            if cameras[i]:
-                pass
-            else:
-                pass
 
 if __name__ == '__main__':
-    set_global_var()
     videoCenter = VideoCenter()
     sys.exit(video_main(videoCenter.uris, "SCREEN"))
     # sys.exit(main(videoCenter.uris, "FILE"))
