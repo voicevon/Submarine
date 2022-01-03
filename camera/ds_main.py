@@ -251,8 +251,8 @@ def make_rtppay():
     
 def make_encoder():
     # Make the encoder
-    print("Creating H264 Encoder")
-    encoder=Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
+    print("Creating H265 Encoder")
+    encoder=Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
     if not encoder:
         sys.stderr.write(" Unable to create encoder")
     encoder.set_property("bitrate", bitrate)
@@ -285,9 +285,9 @@ def make_mkvmux():
 
 def make_h264parse():
     print("Creating H264 parse")
-    parse=Gst.ElementFactory.make("nvv4l2h265enc","nvv4l2h265enc")
+    parse=Gst.ElementFactory.make("h265parse","parse")
     if not parse:
-        sys.stderr.write("  Unable to create nvv4l2h264enc")
+        sys.stderr.write("  Unable to create h265parse")
     return parse
 
 def make_nveglglessink():
@@ -410,6 +410,8 @@ def main(uris, finnal_sink):
         rtppay.link(udp_sink)
 
     if finnal_sink == "FILE":
+        # command = ("uridecodebin uri=rtsp://admin:a@192.168.1.81 ! "
+#     "nvvideoconvert ! nvv4l2h265enc ! h265parse ! matroskamux ! filesink location=cam1.mkv")        
         nvosd = make_nvosd()
         transform = make_nvtransform()
         nvvidconv_postosd=make_nvvidconv_post()
@@ -433,18 +435,20 @@ def main(uris, finnal_sink):
 
         a = streammux.link(nvvidconv)
         # pgie.link(nvvidconv)
-        b =nvvidconv.link(tiler)
-        tiler.link(nvosd)
-        nvosd.link(transform)
+        b = nvvidconv.link(tiler)
+        c = tiler.link(encoder)
+        # c = tiler.link(nvosd)
+        # d = nvosd.link(transform)
         # nvosd.link(nvvidconv_postosd)
         # nvvidconv_postosd.link(caps)
         # caps.link(encoder)
-        transform.link(encoder)
-        encoder.link(parse)
+        # e = transform.link(encoder)
+        f = encoder.link(parse)
         # parse.link(mp4mux)
         # mp4mux.link(filesink)
-        parse.link(mkvmux)
-        mkvmux.link(filesink)
+        g = parse.link(mkvmux)
+        h = mkvmux.link(filesink)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   Link elements ",a,b,c,f,g,h)
 
 
 
