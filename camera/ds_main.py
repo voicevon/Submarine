@@ -44,6 +44,7 @@ pgie_classes_str =  ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 class VideoCenter:
     pipeline = None  # Gst.Pipeline()
     recording_start_at = 0
+    filesink = None
 
     def __init__(self) -> None:
         self.uris = list()
@@ -351,12 +352,11 @@ class VideoCenter:
         return sink
         
     @staticmethod
-    def make_file_sink(filename):
+    def make_file_sink():
         print("Creating filesink")
         sink = Gst.ElementFactory.make("filesink", "filesink")
         if not sink:
             sys.stderr.write("  Unable to create filesink")
-        sink.set_property("location",filename)
         return sink
 
     @staticmethod
@@ -455,10 +455,10 @@ class VideoCenter:
             encoder = VideoCenter.make_encoder()        
             parse = VideoCenter.make_h264parse()
             # mp4mux = make_mp4mux()
-            # filesink = make_file_sink("abc.mp4")
+            # filesink = make_file_sink()
             mkvmux = VideoCenter.make_mkvmux()
-            filesink = VideoCenter.make_file_sink("abc.mkv")
-
+            VideoCenter.filesink = VideoCenter.make_file_sink()
+            VideoCenter.filesink.set_property("location","~/tempvideo.mkv")
             VideoCenter.pipeline.add(nvosd)
             VideoCenter.pipeline.add(transform)
             VideoCenter.pipeline.add(nvvidconv_postosd)
@@ -467,7 +467,7 @@ class VideoCenter:
             VideoCenter.pipeline.add(parse)
             # pipeline.add(mp4mux)
             VideoCenter.pipeline.add(mkvmux)
-            VideoCenter.pipeline.add(filesink)
+            VideoCenter.pipeline.add(VideoCenter.filesink)
             a = streammux.link(nvvidconv)
             b = nvvidconv.link(tiler)
             c = tiler.link(nvvidconv_postosd)
@@ -478,7 +478,7 @@ class VideoCenter:
             # g = parse.link(mp4mux)
             # h = mp4mux.link(filesink)
             g = parse.link(mkvmux)
-            h = mkvmux.link(filesink)
+            h = mkvmux.link(VideoCenter.filesink)
             print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   Link elements ",a,b,c,d,e,f,g,h)
             time.sleep(2)
 
@@ -517,8 +517,12 @@ class VideoCenter:
                 % rtsp_port_num
             )
     @staticmethod
-    def Start():
+    def Start(filesink_location):
         print("Starting pipeline \n")
+        if VideoCenter.filesink:
+            VideoCenter.filesink.set_property("location", filesink_location)
+            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   File will be saved as ", filesink_location)
+            time.sleep(3)
         VideoCenter.pipeline.set_state(Gst.State.PLAYING)
         VideoCenter.recording_start_at = 0
 
@@ -535,11 +539,10 @@ class VideoCenter:
 
 if __name__ == '__main__':
     videoCenter = VideoCenter()
-    videoCenter.CreatePipline(videoCenter.uris, "SCREEN")
-    videoCenter.Start()
+    # videoCenter.CreatePipline(videoCenter.uris, "SCREEN")
+    # videoCenter.CreatePipline(videoCenter.uris, "RTSP")
+    videoCenter.CreatePipline(videoCenter.uris, "FILE")
+    videoCenter.Start("abc.mkv")
     time.sleep(30)
     videoCenter.Stop()
-    # VideoCenter.test()
-    # sys.exit(main(videoCenter.uris, "FILE"))
-    # sys.exit(main(videoCenter.uris, "RTSP"))
 
