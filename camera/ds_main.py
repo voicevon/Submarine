@@ -45,6 +45,8 @@ class VideoCenter:
     pipeline = None  # Gst.Pipeline()
     recording_start_at = 0
     filesink = None
+    rtsp_factory = None
+    rtsp_server = None
 
     def __init__(self) -> None:
         self.uris = list()
@@ -516,17 +518,17 @@ class VideoCenter:
             # Start streaming
             rtsp_port_num = 8554
 
-            server = GstRtspServer.RTSPServer.new()
-            server.props.service = "%d" % rtsp_port_num
-            server.attach(None)
+            VideoCenter.rtsp_server = GstRtspServer.RTSPServer.new()
+            VideoCenter.rtsp_server.props.service = "%d" % rtsp_port_num
+            VideoCenter.rtsp_server.attach(None)
 
-            factory = GstRtspServer.RTSPMediaFactory.new()
-            factory.set_launch(
+            VideoCenter.rtsp_factory = GstRtspServer.RTSPMediaFactory.new()
+            VideoCenter.rtsp_factory.set_launch(
                 '( udpsrc name = pay0 port = %d buffer-size = 524288 caps = "application/x-rtp, media = video, clock-rate = 90000, encoding-name = (string)%s, payload = 96 " )'
                 % (updsink_port_num, "H264")
             )
-            factory.set_shared(True)
-            server.get_mount_points().add_factory("/ds-test", factory)
+            VideoCenter.rtsp_factory.set_shared(True)
+            VideoCenter.rtsp_server.get_mount_points().add_factory("/ds-test", VideoCenter.rtsp_factory)
 
             print(
                 "\n *** DeepStream: Launched RTSP Streaming at rtsp://localhost:%d/ds-test ***\n\n"
