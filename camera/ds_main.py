@@ -42,7 +42,7 @@ pgie_classes_str =  ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 # tiler_sink_pad_buffer_probe  will extract metadata received on OSD sink pad
 # and update params for drawing rectangle, object information etc.
 class VideoCenter:
-    pipeline = Gst.Pipeline()
+    pipeline = None  # Gst.Pipeline()
     recording_start_at = 0
 
     def __init__(self) -> None:
@@ -360,7 +360,7 @@ class VideoCenter:
         return sink
 
     @staticmethod
-    def SpinBackground(uris, finnal_sink):
+    def CreatePipline(uris, finnal_sink):
         # Check input arguments
         for i in range(0, len(uris)):
             fps_streams["stream{0}".format(i)] = GETFPS(i)
@@ -373,7 +373,7 @@ class VideoCenter:
         # Create gstreamer elements */
         # Create Pipeline element that will form a connection of other elements
         print("Creating Pipeline \n ")
-        # pipeline = Gst.Pipeline()
+        VideoCenter.pipeline = Gst.Pipeline()
 
         if not VideoCenter.pipeline:
             sys.stderr.write(" Unable to create Pipeline \n")
@@ -520,7 +520,7 @@ class VideoCenter:
     def Start():
         print("Starting pipeline \n")
         VideoCenter.pipeline.set_state(Gst.State.PLAYING)
-        VideoCenter.recording_start_at = now
+        VideoCenter.recording_start_at = 0
 
     @staticmethod
     def Stop():
@@ -535,10 +535,11 @@ class VideoCenter:
 
 if __name__ == '__main__':
     videoCenter = VideoCenter()
-    videoCenter.SpinBackground(videoCenter.uris, "SCREEN")
-    VideoCenter.test()
+    videoCenter.CreatePipline(videoCenter.uris, "SCREEN")
+    videoCenter.Start()
+    time.sleep(30)
+    videoCenter.Stop()
+    # VideoCenter.test()
     # sys.exit(main(videoCenter.uris, "FILE"))
     # sys.exit(main(videoCenter.uris, "RTSP"))
 
-    while True:
-        pass
