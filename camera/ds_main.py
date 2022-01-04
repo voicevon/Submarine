@@ -248,6 +248,14 @@ class VideoCenter:
         return nvvidconv
 
     @staticmethod
+    def make_tee():
+        print("Creating tee \n ")
+        tee = Gst.ElementFactory.make("tee", "tee")
+        if not tee:
+            sys.stderr.write(" Unable to create tee \n")
+        return tee
+
+    @staticmethod
     def make_nvosd():
         print("Creating nvosd \n ")
         nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
@@ -399,11 +407,14 @@ class VideoCenter:
         pgie = VideoCenter.make_pgie(number_sources)
         tiler = VideoCenter.make_tiler(number_sources)
         nvvidconv = VideoCenter.make_nvvidconv()
+        tee = VideoCenter.make_tee()
 
         print("Adding elements to Pipeline \n")
         # pipeline.add(pgie)
         VideoCenter.pipeline.add(tiler)
         VideoCenter.pipeline.add(nvvidconv)
+        VideoCenter.pipeline.add(tee)
+    
 
         if finnal_sink == 'SCREEN':
             nvosd = VideoCenter.make_nvosd()
@@ -439,13 +450,17 @@ class VideoCenter:
             VideoCenter.pipeline.add(rtppay)
             VideoCenter.pipeline.add(udp_sink)
 
-            streammux.link(nvvidconv)
-            nvvidconv.link(tiler)
-            tiler.link(nvvidconv_postosd)
-            nvvidconv_postosd.link(caps)
-            caps.link(encoder)
-            encoder.link(rtppay)
-            rtppay.link(udp_sink)
+            a = streammux.link(nvvidconv)
+            b = nvvidconv.link(tiler)
+            # streammux.link(tiler)
+            c = tiler.link(nvvidconv_postosd)
+            d = nvvidconv_postosd.link(caps)
+            e = caps.link(encoder)
+            f = encoder.link(rtppay)
+            g = rtppay.link(udp_sink)
+            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>    ", a,b,c,d,e,f,g)
+            time.sleep(3)
+
 
         if finnal_sink == "FILE":
             nvosd = VideoCenter.make_nvosd()
@@ -468,8 +483,9 @@ class VideoCenter:
             # pipeline.add(mp4mux)
             VideoCenter.pipeline.add(mkvmux)
             VideoCenter.pipeline.add(VideoCenter.filesink)
-            a = streammux.link(nvvidconv)
-            b = nvvidconv.link(tiler)
+            # a = streammux.link(nvvidconv)
+            # b = nvvidconv.link(tiler)
+            a = b = streammux.link(tiler)
             c = tiler.link(nvvidconv_postosd)
             d = nvvidconv_postosd.link(caps)
             e = caps.link(encoder)
@@ -516,6 +532,7 @@ class VideoCenter:
                 "\n *** DeepStream: Launched RTSP Streaming at rtsp://localhost:%d/ds-test ***\n\n"
                 % rtsp_port_num
             )
+    
     @staticmethod
     def Start(filesink_location):
         print("Starting pipeline \n")
@@ -540,9 +557,9 @@ class VideoCenter:
 if __name__ == '__main__':
     videoCenter = VideoCenter()
     # videoCenter.CreatePipline(videoCenter.uris, "SCREEN")
-    # videoCenter.CreatePipline(videoCenter.uris, "RTSP")
-    videoCenter.CreatePipline(videoCenter.uris, "FILE")
+    videoCenter.CreatePipline(videoCenter.uris, "RTSP")
+    # videoCenter.CreatePipline(videoCenter.uris, "FILE")
     videoCenter.Start("abc.mkv")
-    time.sleep(30)
+    time.sleep(60)
     videoCenter.Stop()
 
