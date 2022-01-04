@@ -41,466 +41,10 @@ pgie_classes_str =  ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 
 # tiler_sink_pad_buffer_probe  will extract metadata received on OSD sink pad
 # and update params for drawing rectangle, object information etc.
-
-
-def tiler_src_pad_buffer_probe(pad,info,u_data):
-    frame_number = 0
-    num_rects = 0
-    gst_buffer = info.get_buffer()
-    if not gst_buffer:
-        print("Unable to get GstBuffer ")
-        return
-
-    # Retrieve batch metadata from the gst_buffer
-    # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
-    # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
-    batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
-    l_frame = batch_meta.frame_meta_list
-    while l_frame is not None:
-        try:
-            # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
-            # The casting is done by pyds.NvDsFrameMeta.cast()
-            # The casting also keeps ownership of the underlying memory
-            # in the C code, so the Python garbage collector will leave
-            # it alone.
-            frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
-        except StopIteration:
-            break
-
-        frame_number = frame_meta.frame_num
-        l_obj = frame_meta.obj_meta_list
-        num_rects = frame_meta.num_obj_meta
-        obj_counter = {
-            PGIE_CLASS_ID_VEHICLE:0,
-            PGIE_CLASS_ID_PERSON:0,
-            PGIE_CLASS_ID_BICYCLE:0,
-            PGIE_CLASS_ID_ROADSIGN:0
-        }
-        while l_obj is not None:
-            try:
-                # Casting l_obj.data to pyds.NvDsObjectMeta
-                obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
-            except StopIteration:
-                break
-            obj_counter[obj_meta.class_id] + =  1
-            try:
-                l_obj = l_obj.next
-            except StopIteration:
-                break
-        print("Frame Number = ", frame_number, "Number of Objects = ",num_rects,"Vehicle_count = ",obj_counter[PGIE_CLASS_ID_VEHICLE],"Person_count = ",obj_counter[PGIE_CLASS_ID_PERSON])
-
-        # Get frame rate through this probe
-        fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()
-        try:
-            l_frame = l_frame.next
-        except StopIteration:
-            break
-
-    return Gst.PadProbeReturn.OK
-
-
-
-def cb_newpad(decodebin, decoder_src_pad,data):
-    print("In cb_newpad\n")
-    caps = decoder_src_pad.get_current_caps()
-    gststruct = caps.get_structure(0)
-    gstname = gststruct.get_name()
-    source_bin = data
-    features = caps.get_features(0)
-
-    # Need to check if the pad created by the decodebin is for video and not
-    # audio.
-    print("gstname = ",gstname)
-    if gstname.find("video")!= -1:
-        # Link the decodebin pad only if decodebin has picked nvidia
-        # decoder plugin nvdec_*. We do this by checking if the pad caps contain
-        # NVMM memory features.
-        print("features = ",features)
-        if features.contains("memory:NVMM"):
-            # Get the source bin ghost pad
-            bin_ghost_pad = source_bin.get_static_pad("src")
-            if not bin_ghost_pad.set_target(decoder_src_pad):
-                sys.stderr.write("Failed to link decoder src pad to source bin ghost pad\n")
-        else:
-            sys.stderr.write(" Error: Decodebin did not pick nvidia decoder plugin.\n")
-
-def decodebin_child_added(child_proxy,Object,name,user_data):
-    print("Decodebin child added:", name, "\n")
-    if(name.find("decodebin") !=  -1):
-        Object.connect("child-added",decodebin_child_added,user_data)
-
-def create_source_bin(index,uri):
-    print("Creating source bin")
-
-    # Create a source GstBin to abstract this bin's content from the rest of the
-    # pipeline
-    bin_name = "source-bin-%02d" %index
-    print(bin_name)
-    nbin = Gst.Bin.new(bin_name)
-    if not nbin:
-        sys.stderr.write(" Unable to create source bin \n")
-
-    # Source element for reading from the uri.
-    # We will use decodebin and let it figure out the container format of the
-    # stream and the codec and plug the appropriate demux and decode plugins.
-    uri_decode_bin = Gst.ElementFactory.make("uridecodebin", "uri-decode-bin")
-    if not uri_decode_bin:
-        sys.stderr.write(" Unable to create uri decode bin \n")
-    # We set the input uri to the source element
-    uri_decode_bin.set_property("uri",uri)
-    # Connect to the "pad-added" signal of the decodebin which generates a
-    # callback once a new pad for raw data has beed created by the decodebin
-    uri_decode_bin.connect("pad-added",cb_newpad,nbin)
-    uri_decode_bin.connect("child-added",decodebin_child_added,nbin)
-
-    # We need to create a ghost pad for the source bin which will act as a proxy
-    # for the video decoder src pad. The ghost pad will not have a target right
-    # now. Once the decode bin creates the video decoder and generates the
-    # cb_newpad callback, we will set the ghost pad target to the video decoder
-    # src pad.
-    Gst.Bin.add(nbin,uri_decode_bin)
-    bin_pad = nbin.add_pad(Gst.GhostPad.new_no_target("src",Gst.PadDirection.SRC))
-    if not bin_pad:
-        sys.stderr.write(" Failed to add ghost pad in source bin \n")
-        return None
-    return nbin
-
-
-def make_streammux(number_sources):
-    print("Creating streamux \n ")
-    # Create nvstreammux instance to form batches from one or more sources.
-    streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
-    if not streammux:
-        sys.stderr.write(" Unable to create NvStreamMux \n")
-    streammux.set_property('live-source', 1)
-    streammux.set_property("width", 1920)
-    streammux.set_property("height", 1080)
-    streammux.set_property("batch-size", number_sources)
-    streammux.set_property("batched-push-timeout", 4000000)        
-    return streammux
-    
-def make_pgie(number_sources):
-    print("Creating Pgie \n ")
-    pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
-    if not pgie:
-        sys.stderr.write(" Unable to create pgie \n")
-    pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
-
-    pgie_batch_size = pgie.get_property("batch-size")
-    if pgie_batch_size !=  number_sources:
-        print(
-            "WARNING: Overriding infer-config batch-size",
-            pgie_batch_size,
-            " with number of sources ",
-            number_sources,
-            " \n",
-        )
-        pgie.set_property("batch-size", number_sources)        
-    return pgie
-
-def make_tiler(number_sources):
-    print("Creating tiler \n ")
-    tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
-    if not tiler:
-        sys.stderr.write(" Unable to create tiler \n")
-    tiler_rows = int(math.sqrt(number_sources))
-    tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
-    tiler.set_property("rows", tiler_rows)
-    tiler.set_property("columns", tiler_columns)
-    tiler.set_property("width", TILED_OUTPUT_WIDTH)
-    tiler.set_property("height", TILED_OUTPUT_HEIGHT)        
-    return tiler    
-
-def make_nvvidconv():
-    print("Creating nvvidconv \n ")
-    nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
-    if not nvvidconv:
-        sys.stderr.write(" Unable to create nvvidconv \n")
-    return nvvidconv
-
-def make_nvosd():
-    print("Creating nvosd \n ")
-    nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
-    if not nvosd:
-        sys.stderr.write(" Unable to create nvosd \n")
-    nvosd.set_property('process-mode',OSD_PROCESS_MODE)
-    nvosd.set_property('display-text',OSD_DISPLAY_TEXT)        
-    return nvosd
-
-def make_nvvidconv_post():
-    nvvidconv_postosd = Gst.ElementFactory.make("nvvideoconvert", "convertor_postosd")
-    if not nvvidconv_postosd:
-        sys.stderr.write(" Unable to create nvvidconv_postosd \n")
-    return nvvidconv_postosd    
-
-def make_caps():
-    # Create a caps filter
-    caps = Gst.ElementFactory.make("capsfilter", "filter")
-    caps.set_property(
-        "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
-    )
-    return caps
-
-def make_rtppay():
-    # Make the payload-encode video into RTP packets
-    rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
-    print("Creating H264 rtppay")
-    if not rtppay:
-        sys.stderr.write(" Unable to create rtppay")
-    return rtppay
-    
-def make_encoder():
-    # Make the encoder
-    print("Creating H264 Encoder")
-    encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
-    if not encoder:
-        sys.stderr.write(" Unable to create encoder")
-    encoder.set_property("bitrate", bitrate)
-    encoder.set_property("preset-level", 1)
-    encoder.set_property("insert-sps-pps", 1)
-    encoder.set_property("bufapi-version", 1)
-    return encoder
-
-def make_nvtransform():
-    print("Creating nvtransform")
-    transform = Gst.ElementFactory.make("nvegltransform","nvegltransform")
-    if not transform:
-        sys.stderr.write("  Unable to create nvegltransform")
-    return transform
-
-def make_mp4mux():
-    print("Creating mp4mux")
-    mux = Gst.ElementFactory.make("mp4mux","mp4mux")
-    if not mux:
-        sys.stderr.write("  Unable to create mp4mux")
-    return mux
-
-def make_mkvmux():
-    print("Creating mkvmux")
-    mux = Gst.ElementFactory.make("matroskamux","matroskamux")
-    if not mux:
-        sys.stderr.write("  Unable to create matroskamux")
-    return mux
-
-
-def make_h264parse():
-    print("Creating H264 parse")
-    parse = Gst.ElementFactory.make("h264parse","parse")
-    if not parse:
-        sys.stderr.write("  Unable to create h264parse")
-    return parse
-
-def make_nveglglessink():
-    print("Creating nveglessink")
-    sink = Gst.ElementFactory.make("nveglglessink","nveglglesink")
-    if not sink:
-        sys.stderr.write("  Unable to create nveglglessink")
-    return sink
-
-def make_udp_sink(updsink_port_num):
-    # Make the UDP sink
-    print("Creating udp sink")
-    sink = Gst.ElementFactory.make("udpsink", "udpsink")
-    if not sink:
-        sys.stderr.write(" Unable to create udpsink")
-
-    sink.set_property("host", "224.224.255.255")
-    sink.set_property("port", updsink_port_num)
-    sink.set_property("async", False)
-    sink.set_property("sync", 1)
-    sink.set_property("qos", 0)
-    return sink
-    
-def make_file_sink(filename):
-    print("Creating filesink")
-    sink = Gst.ElementFactory.make("filesink", "filesink")
-    if not sink:
-        sys.stderr.write("  Unable to create filesink")
-    sink.set_property("location",filename)
-    return sink
-
-def video_main(uris, finnal_sink):
-    # Check input arguments
-    for i in range(0, len(uris)):
-        fps_streams["stream{0}".format(i)] = GETFPS(i)
-    number_sources = len(uris)
-
-    # Standard GStreamer initialization
-    GObject.threads_init()
-    Gst.init(None)
-
-    # Create gstreamer elements */
-    # Create Pipeline element that will form a connection of other elements
-    print("Creating Pipeline \n ")
-    pipeline = Gst.Pipeline()
-
-    if not pipeline:
-        sys.stderr.write(" Unable to create Pipeline \n")
-
-    streammux = make_streammux(number_sources)
-    pipeline.add(streammux)
-    for i in range(number_sources):
-        print("Creating source_bin ",i," \n ")
-        uri_name = uris[i]
-        source_bin = create_source_bin(i, uri_name)
-        if not source_bin:
-            sys.stderr.write("Unable to create source bin \n")
-        pipeline.add(source_bin)
-        padname = "sink_%u" %i
-        sinkpad =  streammux.get_request_pad(padname)
-        if not sinkpad:
-            sys.stderr.write("Unable to create sink pad bin \n")
-        srcpad = source_bin.get_static_pad("src")
-        if not srcpad:
-            sys.stderr.write("Unable to create src pad bin \n")
-        srcpad.link(sinkpad)
-
-    pgie = make_pgie(number_sources)
-    tiler = make_tiler(number_sources)
-    nvvidconv = make_nvvidconv()
-
-    print("Adding elements to Pipeline \n")
-    # pipeline.add(pgie)
-    pipeline.add(tiler)
-    pipeline.add(nvvidconv)
-
-    if finnal_sink == 'SCREEN':
-        nvosd = make_nvosd()
-        transform = make_nvtransform()
-        nvsink = make_nveglglessink()
-
-        pipeline.add(nvosd)
-        pipeline.add(transform)
-        pipeline.add(nvsink)
-
-        streammux.link(tiler)
-        tiler.link(nvvidconv)
-        nvvidconv.link(nvosd)
-        nvosd.link(transform)
-        transform.link(nvsink)
-
-    if finnal_sink == "RTSP":
-        updsink_port_num = 5400
-        transform = make_nvtransform()
-
-        nvvidconv_postosd = make_nvvidconv_post()
-        caps = make_caps()
-        encoder = make_encoder()        
-        parse = make_h264parse()
-        rtppay  = make_rtppay()
-        udp_sink = make_udp_sink(updsink_port_num)
-
-        pipeline.add(transform)
-        pipeline.add(nvvidconv_postosd)
-        pipeline.add(caps)
-        pipeline.add(encoder)
-        pipeline.add(parse)
-        pipeline.add(rtppay)
-        pipeline.add(udp_sink)
-
-        streammux.link(nvvidconv)
-        nvvidconv.link(tiler)
-        tiler.link(nvvidconv_postosd)
-        nvvidconv_postosd.link(caps)
-        caps.link(encoder)
-        encoder.link(rtppay)
-        rtppay.link(udp_sink)
-
-    if finnal_sink == "FILE":
-        nvosd = make_nvosd()
-        transform = make_nvtransform()
-        nvvidconv_postosd = make_nvvidconv_post()
-        caps = make_caps()
-        encoder = make_encoder()        
-        parse = make_h264parse()
-        # mp4mux = make_mp4mux()
-        # filesink = make_file_sink("abc.mp4")
-        mkvmux = make_mkvmux()
-        filesink = make_file_sink("abc.mkv")
-
-        pipeline.add(nvosd)
-        pipeline.add(transform)
-        pipeline.add(nvvidconv_postosd)
-        pipeline.add(caps)
-        pipeline.add(encoder)
-        pipeline.add(parse)
-        # pipeline.add(mp4mux)
-        pipeline.add(mkvmux)
-        pipeline.add(filesink)
-        a = streammux.link(nvvidconv)
-        b = nvvidconv.link(tiler)
-        c = tiler.link(nvvidconv_postosd)
-        d = nvvidconv_postosd.link(caps)
-        e = caps.link(encoder)
-
-        f = encoder.link(parse)
-        # g = parse.link(mp4mux)
-        # h = mp4mux.link(filesink)
-        g = parse.link(mkvmux)
-        h = mkvmux.link(filesink)
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   Link elements ",a,b,c,d,e,f,g,h)
-        time.sleep(2)
-
-
-
-    # create an event loop and feed gstreamer bus mesages to it
-    loop = GObject.MainLoop()
-    bus = pipeline.get_bus()
-    bus.add_signal_watch()
-    bus.connect ("message", bus_call, loop)
-
-    tiler_src_pad = pgie.get_static_pad("src")
-    if not tiler_src_pad:
-        sys.stderr.write(" Unable to get src pad \n")
-    else:
-        tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, tiler_src_pad_buffer_probe, 0)
-
-    if finnal_sink == "RTSP":
-        # Start streaming
-        rtsp_port_num = 8554
-
-        server = GstRtspServer.RTSPServer.new()
-        server.props.service = "%d" % rtsp_port_num
-        server.attach(None)
-
-        factory = GstRtspServer.RTSPMediaFactory.new()
-        factory.set_launch(
-            '( udpsrc name = pay0 port = %d buffer-size = 524288 caps = "application/x-rtp, media = video, clock-rate = 90000, encoding-name = (string)%s, payload = 96 " )'
-            % (updsink_port_num, codec)
-        )
-        factory.set_shared(True)
-        server.get_mount_points().add_factory("/ds-test", factory)
-
-        print(
-            "\n *** DeepStream: Launched RTSP Streaming at rtsp://localhost:%d/ds-test ***\n\n"
-            % rtsp_port_num
-        )
-
-    # start play back and listen to events
-    print("Starting pipeline \n")
-    pipeline.set_state(Gst.State.PLAYING)
-    # try:
-    #     loop.run()
-    # except BaseException:
-    #     pass
-    # # cleanup
-    time.sleep(20)
-    pipeline.set_state(Gst.State.NULL)
-
-
-
-def set_global_var():
-    global codec
-    global bitrate
-    global stream_path
-    global gie
-    gie = "nvinfer"
-    codec = "H264"
-    bitrate = 4000000
-    stream_path = ""
-    return stream_path    
-
 class VideoCenter:
+    pipeline = None  # Gst.Pipeline()
+    recording_start_at = 0
+
     def __init__(self) -> None:
         self.uris = list()
         for i in range(5):
@@ -518,10 +62,484 @@ class VideoCenter:
                 pass
             else:
                 pass
+    
+    @staticmethod
+    def tiler_src_pad_buffer_probe(pad,info,u_data):
+        frame_number = 0
+        num_rects = 0
+        gst_buffer = info.get_buffer()
+        if not gst_buffer:
+            print("Unable to get GstBuffer ")
+            return
+
+        # Retrieve batch metadata from the gst_buffer
+        # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
+        # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
+        batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
+        l_frame = batch_meta.frame_meta_list
+        while l_frame is not None:
+            try:
+                # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
+                # The casting is done by pyds.NvDsFrameMeta.cast()
+                # The casting also keeps ownership of the underlying memory
+                # in the C code, so the Python garbage collector will leave
+                # it alone.
+                frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
+            except StopIteration:
+                break
+
+            frame_number = frame_meta.frame_num
+            l_obj = frame_meta.obj_meta_list
+            num_rects = frame_meta.num_obj_meta
+            obj_counter = {
+                PGIE_CLASS_ID_VEHICLE:0,
+                PGIE_CLASS_ID_PERSON:0,
+                PGIE_CLASS_ID_BICYCLE:0,
+                PGIE_CLASS_ID_ROADSIGN:0
+            }
+            while l_obj is not None:
+                try:
+                    # Casting l_obj.data to pyds.NvDsObjectMeta
+                    obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
+                except StopIteration:
+                    break
+                obj_counter[obj_meta.class_id] += 1
+                try:
+                    l_obj = l_obj.next
+                except StopIteration:
+                    break
+            print("Frame Number = ", frame_number, "Number of Objects = ",num_rects,"Vehicle_count = ",obj_counter[PGIE_CLASS_ID_VEHICLE],"Person_count = ",obj_counter[PGIE_CLASS_ID_PERSON])
+
+            # Get frame rate through this probe
+            fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()
+            try:
+                l_frame = l_frame.next
+            except StopIteration:
+                break
+
+        return Gst.PadProbeReturn.OK
+
+
+
+    @staticmethod
+    def cb_newpad(decodebin, decoder_src_pad,data):
+        print("In cb_newpad\n")
+        caps = decoder_src_pad.get_current_caps()
+        gststruct = caps.get_structure(0)
+        gstname = gststruct.get_name()
+        source_bin = data
+        features = caps.get_features(0)
+
+        # Need to check if the pad created by the decodebin is for video and not
+        # audio.
+        print("gstname = ",gstname)
+        if gstname.find("video")!= -1:
+            # Link the decodebin pad only if decodebin has picked nvidia
+            # decoder plugin nvdec_*. We do this by checking if the pad caps contain
+            # NVMM memory features.
+            print("features = ",features)
+            if features.contains("memory:NVMM"):
+                # Get the source bin ghost pad
+                bin_ghost_pad = source_bin.get_static_pad("src")
+                if not bin_ghost_pad.set_target(decoder_src_pad):
+                    sys.stderr.write("Failed to link decoder src pad to source bin ghost pad\n")
+            else:
+                sys.stderr.write(" Error: Decodebin did not pick nvidia decoder plugin.\n")
+
+    @staticmethod
+    def decodebin_child_added(child_proxy,Object,name,user_data):
+        print("Decodebin child added:", name, "\n")
+        if(name.find("decodebin") !=  -1):
+            Object.connect("child-added",VideoCenter.decodebin_child_added,user_data)
+
+    @staticmethod
+    def create_source_bin(index,uri):
+        print("Creating source bin")
+
+        # Create a source GstBin to abstract this bin's content from the rest of the
+        # pipeline
+        bin_name = "source-bin-%02d" %index
+        print(bin_name)
+        nbin = Gst.Bin.new(bin_name)
+        if not nbin:
+            sys.stderr.write(" Unable to create source bin \n")
+
+        # Source element for reading from the uri.
+        # We will use decodebin and let it figure out the container format of the
+        # stream and the codec and plug the appropriate demux and decode plugins.
+        uri_decode_bin = Gst.ElementFactory.make("uridecodebin", "uri-decode-bin")
+        if not uri_decode_bin:
+            sys.stderr.write(" Unable to create uri decode bin \n")
+        # We set the input uri to the source element
+        uri_decode_bin.set_property("uri",uri)
+        # Connect to the "pad-added" signal of the decodebin which generates a
+        # callback once a new pad for raw data has beed created by the decodebin
+        uri_decode_bin.connect("pad-added", VideoCenter.cb_newpad,nbin)
+        uri_decode_bin.connect("child-added", VideoCenter.decodebin_child_added,nbin)
+
+        # We need to create a ghost pad for the source bin which will act as a proxy
+        # for the video decoder src pad. The ghost pad will not have a target right
+        # now. Once the decode bin creates the video decoder and generates the
+        # cb_newpad callback, we will set the ghost pad target to the video decoder
+        # src pad.
+        Gst.Bin.add(nbin,uri_decode_bin)
+        bin_pad = nbin.add_pad(Gst.GhostPad.new_no_target("src",Gst.PadDirection.SRC))
+        if not bin_pad:
+            sys.stderr.write(" Failed to add ghost pad in source bin \n")
+            return None
+        return nbin
+
+
+    @staticmethod
+    def make_streammux(number_sources):
+        print("Creating streamux \n ")
+        # Create nvstreammux instance to form batches from one or more sources.
+        streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
+        if not streammux:
+            sys.stderr.write(" Unable to create NvStreamMux \n")
+        streammux.set_property('live-source', 1)
+        streammux.set_property("width", 1920)
+        streammux.set_property("height", 1080)
+        streammux.set_property("batch-size", number_sources)
+        streammux.set_property("batched-push-timeout", 4000000)        
+        return streammux
+        
+    @staticmethod
+    def make_pgie(number_sources):
+        print("Creating Pgie \n ")
+        pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
+        if not pgie:
+            sys.stderr.write(" Unable to create pgie \n")
+        pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
+
+        pgie_batch_size = pgie.get_property("batch-size")
+        if pgie_batch_size !=  number_sources:
+            print(
+                "WARNING: Overriding infer-config batch-size",
+                pgie_batch_size,
+                " with number of sources ",
+                number_sources,
+                " \n",
+            )
+            pgie.set_property("batch-size", number_sources)        
+        return pgie
+
+    @staticmethod
+    def make_tiler(number_sources):
+        print("Creating tiler \n ")
+        tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
+        if not tiler:
+            sys.stderr.write(" Unable to create tiler \n")
+        tiler_rows = int(math.sqrt(number_sources))
+        tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
+        tiler.set_property("rows", tiler_rows)
+        tiler.set_property("columns", tiler_columns)
+        tiler.set_property("width", TILED_OUTPUT_WIDTH)
+        tiler.set_property("height", TILED_OUTPUT_HEIGHT)        
+        return tiler    
+
+    @staticmethod
+    def make_nvvidconv():
+        print("Creating nvvidconv \n ")
+        nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
+        if not nvvidconv:
+            sys.stderr.write(" Unable to create nvvidconv \n")
+        return nvvidconv
+
+    @staticmethod
+    def make_nvosd():
+        print("Creating nvosd \n ")
+        nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
+        if not nvosd:
+            sys.stderr.write(" Unable to create nvosd \n")
+        nvosd.set_property('process-mode',OSD_PROCESS_MODE)
+        nvosd.set_property('display-text',OSD_DISPLAY_TEXT)        
+        return nvosd
+
+    @staticmethod
+    def make_nvvidconv_post():
+        nvvidconv_postosd = Gst.ElementFactory.make("nvvideoconvert", "convertor_postosd")
+        if not nvvidconv_postosd:
+            sys.stderr.write(" Unable to create nvvidconv_postosd \n")
+        return nvvidconv_postosd    
+
+    @staticmethod
+    def make_caps():
+        # Create a caps filter
+        caps = Gst.ElementFactory.make("capsfilter", "filter")
+        caps.set_property(
+            "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
+        )
+        return caps
+
+    @staticmethod
+    def make_rtppay():
+        # Make the payload-encode video into RTP packets
+        rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
+        print("Creating H264 rtppay")
+        if not rtppay:
+            sys.stderr.write(" Unable to create rtppay")
+        return rtppay
+        
+    @staticmethod
+    def make_encoder():
+        # Make the encoder
+        print("Creating H264 Encoder")
+        encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
+        if not encoder:
+            sys.stderr.write(" Unable to create encoder")
+        encoder.set_property("bitrate", 4000000)
+        encoder.set_property("preset-level", 1)
+        encoder.set_property("insert-sps-pps", 1)
+        encoder.set_property("bufapi-version", 1)
+        return encoder
+
+    @staticmethod
+    def make_nvtransform():
+        print("Creating nvtransform")
+        transform = Gst.ElementFactory.make("nvegltransform","nvegltransform")
+        if not transform:
+            sys.stderr.write("  Unable to create nvegltransform")
+        return transform
+
+    @staticmethod
+    def make_mp4mux():
+        print("Creating mp4mux")
+        mux = Gst.ElementFactory.make("mp4mux","mp4mux")
+        if not mux:
+            sys.stderr.write("  Unable to create mp4mux")
+        return mux
+
+    @staticmethod
+    def make_mkvmux():
+        print("Creating mkvmux")
+        mux = Gst.ElementFactory.make("matroskamux","matroskamux")
+        if not mux:
+            sys.stderr.write("  Unable to create matroskamux")
+        return mux
+
+
+    @staticmethod
+    def make_h264parse():
+        print("Creating H264 parse")
+        parse = Gst.ElementFactory.make("h264parse","parse")
+        if not parse:
+            sys.stderr.write("  Unable to create h264parse")
+        return parse
+
+    @staticmethod
+    def make_nveglglessink():
+        print("Creating nveglessink")
+        sink = Gst.ElementFactory.make("nveglglessink","nveglglesink")
+        if not sink:
+            sys.stderr.write("  Unable to create nveglglessink")
+        return sink
+
+    @staticmethod
+    def make_udp_sink(updsink_port_num):
+        # Make the UDP sink
+        print("Creating udp sink")
+        sink = Gst.ElementFactory.make("udpsink", "udpsink")
+        if not sink:
+            sys.stderr.write(" Unable to create udpsink")
+
+        sink.set_property("host", "224.224.255.255")
+        sink.set_property("port", updsink_port_num)
+        sink.set_property("async", False)
+        sink.set_property("sync", 1)
+        sink.set_property("qos", 0)
+        return sink
+        
+    @staticmethod
+    def make_file_sink(filename):
+        print("Creating filesink")
+        sink = Gst.ElementFactory.make("filesink", "filesink")
+        if not sink:
+            sys.stderr.write("  Unable to create filesink")
+        sink.set_property("location",filename)
+        return sink
+
+    @staticmethod
+    def CreatePipline(uris, finnal_sink):
+        # Check input arguments
+        for i in range(0, len(uris)):
+            fps_streams["stream{0}".format(i)] = GETFPS(i)
+        number_sources = len(uris)
+
+        # Standard GStreamer initialization
+        GObject.threads_init()
+        Gst.init(None)
+
+        # Create gstreamer elements */
+        # Create Pipeline element that will form a connection of other elements
+        print("Creating Pipeline \n ")
+        VideoCenter.pipeline = Gst.Pipeline()
+
+        if not VideoCenter.pipeline:
+            sys.stderr.write(" Unable to create Pipeline \n")
+
+        streammux = VideoCenter.make_streammux(number_sources)
+        VideoCenter.pipeline.add(streammux)
+        for i in range(number_sources):
+            print("Creating source_bin ",i," \n ")
+            uri_name = uris[i]
+            source_bin = VideoCenter.create_source_bin(i, uri_name)
+            if not source_bin:
+                sys.stderr.write("Unable to create source bin \n")
+            VideoCenter.pipeline.add(source_bin)
+            padname = "sink_%u" %i
+            sinkpad =  streammux.get_request_pad(padname)
+            if not sinkpad:
+                sys.stderr.write("Unable to create sink pad bin \n")
+            srcpad = source_bin.get_static_pad("src")
+            if not srcpad:
+                sys.stderr.write("Unable to create src pad bin \n")
+            srcpad.link(sinkpad)
+
+        pgie = VideoCenter.make_pgie(number_sources)
+        tiler = VideoCenter.make_tiler(number_sources)
+        nvvidconv = VideoCenter.make_nvvidconv()
+
+        print("Adding elements to Pipeline \n")
+        # pipeline.add(pgie)
+        VideoCenter.pipeline.add(tiler)
+        VideoCenter.pipeline.add(nvvidconv)
+
+        if finnal_sink == 'SCREEN':
+            nvosd = VideoCenter.make_nvosd()
+            transform = VideoCenter.make_nvtransform()
+            nvsink = VideoCenter.make_nveglglessink()
+
+            VideoCenter.pipeline.add(nvosd)
+            VideoCenter.pipeline.add(transform)
+            VideoCenter.pipeline.add(nvsink)
+
+            streammux.link(tiler)
+            tiler.link(nvvidconv)
+            nvvidconv.link(nvosd)
+            nvosd.link(transform)
+            transform.link(nvsink)
+
+        if finnal_sink == "RTSP":
+            updsink_port_num = 5400
+            transform = VideoCenter.make_nvtransform()
+
+            nvvidconv_postosd = VideoCenter.make_nvvidconv_post()
+            caps = VideoCenter.make_caps()
+            encoder = VideoCenter.make_encoder()        
+            parse = VideoCenter.make_h264parse()
+            rtppay  = VideoCenter.make_rtppay()
+            udp_sink = VideoCenter.make_udp_sink(updsink_port_num)
+
+            VideoCenter.pipeline.add(transform)
+            VideoCenter.pipeline.add(nvvidconv_postosd)
+            VideoCenter.pipeline.add(caps)
+            VideoCenter.pipeline.add(encoder)
+            VideoCenter.pipeline.add(parse)
+            VideoCenter.pipeline.add(rtppay)
+            VideoCenter.pipeline.add(udp_sink)
+
+            streammux.link(nvvidconv)
+            nvvidconv.link(tiler)
+            tiler.link(nvvidconv_postosd)
+            nvvidconv_postosd.link(caps)
+            caps.link(encoder)
+            encoder.link(rtppay)
+            rtppay.link(udp_sink)
+
+        if finnal_sink == "FILE":
+            nvosd = VideoCenter.make_nvosd()
+            transform = VideoCenter.make_nvtransform()
+            nvvidconv_postosd = VideoCenter.make_nvvidconv_post()
+            caps = VideoCenter.make_caps()
+            encoder = VideoCenter.make_encoder()        
+            parse = VideoCenter.make_h264parse()
+            # mp4mux = make_mp4mux()
+            # filesink = make_file_sink("abc.mp4")
+            mkvmux = VideoCenter.make_mkvmux()
+            filesink = VideoCenter.make_file_sink("abc.mkv")
+
+            VideoCenter.pipeline.add(nvosd)
+            VideoCenter.pipeline.add(transform)
+            VideoCenter.pipeline.add(nvvidconv_postosd)
+            VideoCenter.pipeline.add(caps)
+            VideoCenter.pipeline.add(encoder)
+            VideoCenter.pipeline.add(parse)
+            # pipeline.add(mp4mux)
+            VideoCenter.pipeline.add(mkvmux)
+            VideoCenter.pipeline.add(filesink)
+            a = streammux.link(nvvidconv)
+            b = nvvidconv.link(tiler)
+            c = tiler.link(nvvidconv_postosd)
+            d = nvvidconv_postosd.link(caps)
+            e = caps.link(encoder)
+
+            f = encoder.link(parse)
+            # g = parse.link(mp4mux)
+            # h = mp4mux.link(filesink)
+            g = parse.link(mkvmux)
+            h = mkvmux.link(filesink)
+            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   Link elements ",a,b,c,d,e,f,g,h)
+            time.sleep(2)
+
+
+
+        # create an event loop and feed gstreamer bus mesages to it
+        loop = GObject.MainLoop()
+        bus = VideoCenter.pipeline.get_bus()
+        bus.add_signal_watch()
+        bus.connect ("message", bus_call, loop)
+
+        tiler_src_pad = pgie.get_static_pad("src")
+        if not tiler_src_pad:
+            sys.stderr.write(" Unable to get src pad \n")
+        else:
+            tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, VideoCenter.tiler_src_pad_buffer_probe, 0)
+
+        if finnal_sink == "RTSP":
+            # Start streaming
+            rtsp_port_num = 8554
+
+            server = GstRtspServer.RTSPServer.new()
+            server.props.service = "%d" % rtsp_port_num
+            server.attach(None)
+
+            factory = GstRtspServer.RTSPMediaFactory.new()
+            factory.set_launch(
+                '( udpsrc name = pay0 port = %d buffer-size = 524288 caps = "application/x-rtp, media = video, clock-rate = 90000, encoding-name = (string)%s, payload = 96 " )'
+                % (updsink_port_num, "H264")
+            )
+            factory.set_shared(True)
+            server.get_mount_points().add_factory("/ds-test", factory)
+
+            print(
+                "\n *** DeepStream: Launched RTSP Streaming at rtsp://localhost:%d/ds-test ***\n\n"
+                % rtsp_port_num
+            )
+    @staticmethod
+    def Start():
+        print("Starting pipeline \n")
+        VideoCenter.pipeline.set_state(Gst.State.PLAYING)
+        VideoCenter.recording_start_at = 0
+
+    @staticmethod
+    def Stop():
+        VideoCenter.pipeline.set_state(Gst.State.NULL)
+
+
+    def SpinOnce(self):
+        now = 100
+        start_timestamp = VideoCenter.recording_start_at
+        if now - start_timestamp > 120:
+            VideoCenter.Stop()
 
 if __name__ == '__main__':
-    set_global_var()
     videoCenter = VideoCenter()
-    sys.exit(video_main(videoCenter.uris, "SCREEN"))
+    videoCenter.CreatePipline(videoCenter.uris, "SCREEN")
+    videoCenter.Start()
+    time.sleep(30)
+    videoCenter.Stop()
+    # VideoCenter.test()
     # sys.exit(main(videoCenter.uris, "FILE"))
     # sys.exit(main(videoCenter.uris, "RTSP"))
+
