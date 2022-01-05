@@ -197,15 +197,15 @@ class VideoCenter:
     def make_streammux(number_sources):
         print("Creating streamux \n ")
         # Create nvstreammux instance to form batches from one or more sources.
-        streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
-        if not streammux:
+        muxer = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
+        if not muxer:
             sys.stderr.write(" Unable to create NvStreamMux \n")
-        streammux.set_property('live-source', 1)
-        streammux.set_property("width", 1920)
-        streammux.set_property("height", 1080)
-        streammux.set_property("batch-size", number_sources)
-        streammux.set_property("batched-push-timeout", 4000000)        
-        return streammux
+        muxer.set_property('live-source', 1)
+        muxer.set_property("width", 1920)
+        muxer.set_property("height", 1080)
+        muxer.set_property("batch-size", number_sources)
+        muxer.set_property("batched-push-timeout", 4000000)        
+        return muxer
         
     @staticmethod
     def make_pgie(number_sources):
@@ -370,6 +370,15 @@ class VideoCenter:
         return sink
 
     @staticmethod
+    def make_queue(name):
+        print("Creating GstElement::Queue")
+        queue = Gst.ElementFactory.make("queue", name)
+        if not queue:
+            sys.stderr.write("  Unable to create queue", name)
+        return queue
+
+
+    @staticmethod
     def CreatePipline(uris, finnal_sink):
         # Check input arguments
         for i in range(0, len(uris)):
@@ -413,25 +422,81 @@ class VideoCenter:
 
         print("Adding elements to Pipeline \n")
         # pipeline.add(pgie)
+
+        nvosd = VideoCenter.make_nvosd()
+        transform = VideoCenter.make_nvtransform()
+        nvsink = VideoCenter.make_nveglglessink()  
+
+        # nvosd = VideoCenter.make_nvosd()
+        # transform = VideoCenter.make_nvtransform()
+        # nvvidconv_postosd = VideoCenter.make_nvvidconv_post()
+        caps = VideoCenter.make_caps()
+        encoder = VideoCenter.make_encoder()        
+        parse = VideoCenter.make_h264parse()   
+        q1 = VideoCenter.make_queue("q1")      
+        q2= VideoCenter.make_queue("q2")   
+        VideoCenter.pipeline.add(q1)   
+        VideoCenter.pipeline.add(q2)   
         VideoCenter.pipeline.add(tiler)
         VideoCenter.pipeline.add(nvvidconv)
         VideoCenter.pipeline.add(tee)
-    
 
-        if finnal_sink == 'SCREEN':
-            nvosd = VideoCenter.make_nvosd()
-            transform = VideoCenter.make_nvtransform()
-            nvsink = VideoCenter.make_nveglglessink()
+        VideoCenter.pipeline.add(nvosd)
+        VideoCenter.pipeline.add(transform)
+        VideoCenter.pipeline.add(nvsink)
 
-            VideoCenter.pipeline.add(nvosd)
-            VideoCenter.pipeline.add(transform)
-            VideoCenter.pipeline.add(nvsink)
 
-            streammux.link(tiler)
-            tiler.link(nvvidconv)
-            nvvidconv.link(nvosd)
-            nvosd.link(transform)
-            transform.link(nvsink)
+        # mp4mux = make_mp4mux()
+        # filesink = make_file_sink()
+        mkvmux = VideoCenter.make_mkvmux()
+        VideoCenter.filesink = VideoCenter.make_file_sink()
+        VideoCenter.filesink.set_property("location","~/tempvideo.mkv")
+        # VideoCenter.pipeline.add(nvosd)
+        # VideoCenter.pipeline.add(transform)
+        # VideoCenter.pipeline.add(nvvidconv_postosd)
+        VideoCenter.pipeline.add(caps)
+        VideoCenter.pipeline.add(encoder)
+        VideoCenter.pipeline.add(parse)
+        # pipeline.add(mp4mux)
+        VideoCenter.pipeline.add(mkvmux)
+        VideoCenter.pipeline.add(VideoCenter.filesink)
+        # a = streammux.link(nvvidconv)
+        # b = nvvidconv.link(tiler)
+
+        #Common source path
+        a = streammux.link(tiler)
+        b = tiler.link(nvvidconv)
+        c = nvvidconv.link(tee)
+
+
+        # To Output On Screen
+        s0 = tee.link(q1)
+        s1 = q1.link(nvosd)
+        s2 = nvosd.link(transform)
+        s3 = transform.link(nvsink)
+
+        # To save file
+        # f1 = streammux.link(tiler)
+        # c = tiler.link(nvvidconv)
+        f0 = tee.link(q2)
+        f1 = q2.link(caps)
+        f2 = caps.link(encoder)
+
+        f3 = encoder.link(parse)
+        # g = parse.link(mp4mux)
+        # h = mp4mux.link(filesink)
+        f4 = parse.link(mkvmux)
+        f5 = mkvmux.link(VideoCenter.filesink)
+
+        # To AI network
+
+        # To OpenCV
+
+        print(">>>>>>>>>>>> Link elements ",a,b,c, " >>> OSC == ", s0,s1,s2,s3, " >>> Save to file = ", f0, f1,f2,f3,f4,f5)
+        time.sleep(10)
+
+        # if finnal_sink == 'SCREEN':
+
 
         if finnal_sink == "RTSP":
             updsink_port_num = 5400
@@ -464,41 +529,8 @@ class VideoCenter:
             time.sleep(3)
 
 
-        if finnal_sink == "FILE":
-            nvosd = VideoCenter.make_nvosd()
-            transform = VideoCenter.make_nvtransform()
-            nvvidconv_postosd = VideoCenter.make_nvvidconv_post()
-            caps = VideoCenter.make_caps()
-            encoder = VideoCenter.make_encoder()        
-            parse = VideoCenter.make_h264parse()
-            # mp4mux = make_mp4mux()
-            # filesink = make_file_sink()
-            mkvmux = VideoCenter.make_mkvmux()
-            VideoCenter.filesink = VideoCenter.make_file_sink()
-            VideoCenter.filesink.set_property("location","~/tempvideo.mkv")
-            VideoCenter.pipeline.add(nvosd)
-            VideoCenter.pipeline.add(transform)
-            VideoCenter.pipeline.add(nvvidconv_postosd)
-            VideoCenter.pipeline.add(caps)
-            VideoCenter.pipeline.add(encoder)
-            VideoCenter.pipeline.add(parse)
-            # pipeline.add(mp4mux)
-            VideoCenter.pipeline.add(mkvmux)
-            VideoCenter.pipeline.add(VideoCenter.filesink)
-            # a = streammux.link(nvvidconv)
-            # b = nvvidconv.link(tiler)
-            a = b = streammux.link(tiler)
-            c = tiler.link(nvvidconv_postosd)
-            d = nvvidconv_postosd.link(caps)
-            e = caps.link(encoder)
+        # if finnal_sink == "FILE":
 
-            f = encoder.link(parse)
-            # g = parse.link(mp4mux)
-            # h = mp4mux.link(filesink)
-            g = parse.link(mkvmux)
-            h = mkvmux.link(VideoCenter.filesink)
-            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   Link elements ",a,b,c,d,e,f,g,h)
-            time.sleep(2)
 
 
 
@@ -558,10 +590,10 @@ class VideoCenter:
 
 if __name__ == '__main__':
     videoCenter = VideoCenter()
-    # videoCenter.CreatePipline(videoCenter.uris, "SCREEN")
-    videoCenter.CreatePipline(videoCenter.uris, "RTSP")
+    videoCenter.CreatePipline(videoCenter.uris, "SCREEN")
+    # videoCenter.CreatePipline(videoCenter.uris, "RTSP")
     # videoCenter.CreatePipline(videoCenter.uris, "FILE")
     videoCenter.Start("abc.mkv")
-    time.sleep(60)
+    time.sleep(20)
     videoCenter.Stop()
 
