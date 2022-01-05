@@ -570,8 +570,9 @@ class VideoCenter:
         print("Starting pipeline \n")
         if VideoCenter.filesink:
             VideoCenter.filesink.set_property("location", filesink_location)
+            VideoCenter.filesink.set_property("async",False)
             print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   File will be saved as ", filesink_location)
-            time.sleep(3)
+            # time.sleep(3)
         x = VideoCenter.pipeline.set_state(Gst.State.PLAYING)
         print("================================================================",x)
         VideoCenter.recording_start_at = 0
