@@ -360,7 +360,24 @@ class VideoCenter:
         return sink
 
     @staticmethod
-    def CreatePipline(uris, finnal_sink):
+    def make_tee():
+        print("Creating tee")
+        tee = Gst.ElementFactory.make("tee", "tee")
+        if not tee:
+            sys.stderr.write("  Unable to create tee")
+        return tee
+
+    @staticmethod
+    def make_queue(name):
+        print("Creating queue")
+        q = Gst.ElementFactory.make("tee", name)
+        if not q:
+            sys.stderr.write("  Unable to create tee, name=", name)
+        return q
+
+
+    @staticmethod
+    def CreatePipline(uris, OSC=True, SaveToFIle=True,RtspOut=False):
         # Check input arguments
         for i in range(0, len(uris)):
             fps_streams["stream{0}".format(i)] = GETFPS(i)
@@ -399,28 +416,38 @@ class VideoCenter:
         pgie = VideoCenter.make_pgie(number_sources)
         tiler = VideoCenter.make_tiler(number_sources)
         nvvidconv = VideoCenter.make_nvvidconv()
+        tee = VideoCenter.make_tee()
+        nvosd = VideoCenter.make_nvosd()
+        transform = VideoCenter.make_nvtransform()
 
         print("Adding elements to Pipeline \n")
         # pipeline.add(pgie)
         VideoCenter.pipeline.add(tiler)
         VideoCenter.pipeline.add(nvvidconv)
-
-        if finnal_sink == 'SCREEN':
-            nvosd = VideoCenter.make_nvosd()
-            transform = VideoCenter.make_nvtransform()
+        VideoCenter.pipeline.add(tee)
+        VideoCenter.pipeline.add(nvosd)
+        VideoCenter.pipeline.add(transform)
+        streammux.link(tiler)
+        # tiler.link(nvvidconv)
+        tiler.link(tee)
+        if OSC:
+            q1 =  VideoCenter.make_queue("q1")
             nvsink = VideoCenter.make_nveglglessink()
-
-            VideoCenter.pipeline.add(nvosd)
-            VideoCenter.pipeline.add(transform)
             VideoCenter.pipeline.add(nvsink)
-
-            streammux.link(tiler)
-            tiler.link(nvvidconv)
+            VideoCenter.pipeline.add(q1)
+            source_pad = tee.get_request_pad('src_1')
+            if not source_pad:
+                print("   Unable to get_request_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+            sink_pad = nvvidconv.get_static_pad("sink")  
+            if not sink_pad:
+                print("   Unable to get_static_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+            source_pad.link(sinkpad)
+            # q1.link(nvvidconv)
             nvvidconv.link(nvosd)
             nvosd.link(transform)
             transform.link(nvsink)
 
-        if finnal_sink == "RTSP":
+        if RtspOut:
             updsink_port_num = 5400
             transform = VideoCenter.make_nvtransform()
 
@@ -447,9 +474,12 @@ class VideoCenter:
             encoder.link(rtppay)
             rtppay.link(udp_sink)
 
-        if finnal_sink == "FILE":
-            nvosd = VideoCenter.make_nvosd()
-            transform = VideoCenter.make_nvtransform()
+        if SaveToFIle:
+        # if True:
+            # nvosd = VideoCenter.make_nvosd()
+            # transform = VideoCenter.make_nvtransform()
+            q2 = VideoCenter.make_queue("q2")
+            VideoCenter.pipeline.add(q2)
             nvvidconv_postosd = VideoCenter.make_nvvidconv_post()
             caps = VideoCenter.make_caps()
             encoder = VideoCenter.make_encoder()        
@@ -459,8 +489,8 @@ class VideoCenter:
             mkvmux = VideoCenter.make_mkvmux()
             VideoCenter.filesink = VideoCenter.make_file_sink()
             VideoCenter.filesink.set_property("location","~/tempvideo.mkv")
-            VideoCenter.pipeline.add(nvosd)
-            VideoCenter.pipeline.add(transform)
+            # VideoCenter.pipeline.add(nvosd)
+            # VideoCenter.pipeline.add(transform)
             VideoCenter.pipeline.add(nvvidconv_postosd)
             VideoCenter.pipeline.add(caps)
             VideoCenter.pipeline.add(encoder)
@@ -468,9 +498,19 @@ class VideoCenter:
             # pipeline.add(mp4mux)
             VideoCenter.pipeline.add(mkvmux)
             VideoCenter.pipeline.add(VideoCenter.filesink)
-            a = streammux.link(nvvidconv)
-            b = nvvidconv.link(tiler)
-            c = tiler.link(nvvidconv_postosd)
+
+            source_pad1 = tee.get_request_pad('src_2')
+            if not source_pad1:
+                print("   Unable to get_request_pad(1) XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+            a =b= sink_pad1 = nvvidconv_postosd.get_static_pad("sink")  
+            if not sink_pad1:
+                print("   Unable to get_static_pad(1) XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+            c= source_pad1.link(sink_pad1)            
+            # a = streammux.link(nvvidconv)
+            # b = nvvidconv.link(tiler)
+            # c = tiler.link(nvvidconv_postosd)
+            # a = b = tee.link(q2)
+            # c = q2.link(nvvidconv_postosd)
             d = nvvidconv_postosd.link(caps)
             e = caps.link(encoder)
 
@@ -496,7 +536,7 @@ class VideoCenter:
         else:
             tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, VideoCenter.tiler_src_pad_buffer_probe, 0)
 
-        if finnal_sink == "RTSP":
+        if RtspOut:
             # Start streaming
             rtsp_port_num = 8554
 
@@ -539,10 +579,8 @@ class VideoCenter:
 
 if __name__ == '__main__':
     videoCenter = VideoCenter()
-    # videoCenter.CreatePipline(videoCenter.uris, "SCREEN")
-    # videoCenter.CreatePipline(videoCenter.uris, "RTSP")
-    videoCenter.CreatePipline(videoCenter.uris, "FILE")
+    VideoCenter.CreatePipline(videoCenter.uris, OSC=True, SaveToFIle=False, RtspOut=False )
     videoCenter.Start("abc.mkv")
-    time.sleep(30)
+    time.sleep(15)
     videoCenter.Stop()
 
