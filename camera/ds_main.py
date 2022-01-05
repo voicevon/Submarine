@@ -430,16 +430,16 @@ class VideoCenter:
             VideoCenter.pipeline.add(q1)
 
             a=True
-            # source_pad = tee.get_request_pad('src_0')
-            # if not source_pad:
-            #     print("   Unable to get_request_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
-            # sink_pad = q1.get_static_pad("sink")  
-            # if not sink_pad:
-            #     print("   Unable to get_static_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
-            # a = source_pad.link(sinkpad)
-            # if not a:
-            #     print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxxxxxxxxxxxxxxxxxxxxxxxxx    ")
-            a = tee.link(q1) 
+            source_pad = tee.get_request_pad('src_%u')
+            if not source_pad:
+                print("   Unable to get_request_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+            sink_pad = q1.get_static_pad("sink")  
+            if not sink_pad:
+                print("   Unable to get_static_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+            a = source_pad.link(sink_pad)
+            if a != Gst.PadLinkReturn.OK:
+                print("output to screen link      source_pad.link(sinkpad)= ", a)
+            # a = tee.link(q1) 
             b = q1.link(nvvidconv)
             
             c=nvvidconv.link(nvosd)
@@ -505,10 +505,13 @@ class VideoCenter:
             sink_pad1 = nvvidconv_postosd.get_static_pad("sink")  
             if not sink_pad1:
                 print("   Unable to get_static_pad(1) XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
-            a=b=c= source_pad1.link(sink_pad1)            
+            a= source_pad1.link(sink_pad1)   
+            if a != Gst.PadLinkReturn.OK:
+                print("outout to file link      source_pad.link(sinkpad)= ", a)
+
                # a = b = tee.link(q2)
             # c = q2.link(nvvidconv_postosd)
-            d = nvvidconv_postosd.link(caps)
+            b=c=d = nvvidconv_postosd.link(caps)
             e = caps.link(encoder)
 
             f = encoder.link(parse)
