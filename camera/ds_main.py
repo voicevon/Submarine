@@ -42,12 +42,15 @@ OSD_PROCESS_MODE =  0
 OSD_DISPLAY_TEXT =  1
 pgie_classes_str =  ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 
+image_arr = None
+
 # tiler_sink_pad_buffer_probe  will extract metadata received on OSD sink pad
 # and update params for drawing rectangle, object information etc.
 class VideoCenter:
     pipeline = None  # Gst.Pipeline()
     recording_start_at = 0
     filesink = None
+    cv_counter = 0
 
     def __init__(self) -> None:
         self.uris = list()
@@ -466,11 +469,12 @@ class VideoCenter:
     def gst_to_opencv(sample):
         buf = sample.get_buffer()
         caps = sample.get_caps()
-        print(caps.get_structure(0).get_value('format'))
-        print(caps.get_structure(0).get_value('height'))
-        print(caps.get_structure(0).get_value('width'))
-
-        print(buf.get_size())
+        format = caps.get_structure(0).get_value('format')
+        height = caps.get_structure(0).get_value('height')
+        width = caps.get_structure(0).get_value('width')
+        buffer_size = buf.get_size()
+        print ("format, width, height, buffer_size =  ", format, width, height, buffer_size)
+        return None
 
         arr = numpy.ndarray(
             (caps.get_structure(0).get_value('height'),
@@ -482,21 +486,29 @@ class VideoCenter:
 
     @staticmethod
     def new_buffer(sink, data):
+        # VideoCenter.cv_counter += 1
+        # if VideoCenter.cv_counter < 100:
+        #     return Gst.FlowReturn.OK
+        VideoCenter.cv_counter = 0        
         global image_arr
         sample = sink.emit("pull-sample")
-        print("ccccccccccccccccccccccccccccccccccccccccccc")
         # buf = sample.get_buffer()
         # print "Timestamp: ", buf.pts
         arr = VideoCenter.gst_to_opencv(sample)
         image_arr = arr
-        if image_arr is not None:   
-            cv2.imshow("appsink image arr", image_arr)
-            cv2.waitKey(1)
+
         return Gst.FlowReturn.OK
 
     @staticmethod
     def link_output_opencv(tee):
         # https://gist.github.com/cbenhagen/76b24573fa63e7492fb6
+        # https://stackoverflow.com/questions/10403588/adding-opencv-processing-to-gstreamer-application
+        # http://lifestyletransfer.com/how-to-use-gstreamer-appsink-in-python/
+        # https://forums.developer.nvidia.com/t/feeding-nv12-into-opencv2/167626
+        # https://forums.developer.nvidia.com/t/convert-nv12-to-rgb-in-deepstream-pipeline/169957/8
+        # https://gist.github.com/CasiaFan/684ec8c36624fb5ff61360c71ee9e4ec
+        #       https://gist.github.com/Tutorgaming/55490ac88a3d91302be1d8fd44ac8055
+
         # nvosd_cv = VideoCenter.make_nvosd("osd_cv")
         # transform_cv = VideoCenter.make_nvtransform("transform_cv")
         appsink = VideoCenter.make_app_sink()
@@ -518,11 +530,14 @@ class VideoCenter:
             print("output to screen link      source_pad.link(sinkpad)= ", a)
         # a = tee.link(q1) 
         # b = nvvidconv.link(nvvidconv)
-        appsink.set_property("max-buffers", 2)
+        nvvidconv.set_property("format")
+
+        appsink.set_property("max-buffers", 10000000)
         appsink.set_property("drop", True)
         # # sink.set_property("sync", False)
-        caps = Gst.caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}")
-        appsink.set_property("caps", caps)
+        # caps = Gst.caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}")
+        # caps = Gst.caps_from_string("video/x-raw,format=RGB,width=640,height=480")
+        # appsink.set_property("caps", caps)
         appsink.set_property("emit-signals", True)
         appsink.set_property("async", False)
         appsink.connect("new-sample", VideoCenter.new_buffer, appsink)   
@@ -674,6 +689,10 @@ if __name__ == '__main__':
     videoCenter = VideoCenter()
     VideoCenter.CreatePipline(videoCenter.uris, out_to_screen=True, out_to_file=True, out_to_opencv=True, out_to_rtsp=False )
     videoCenter.Start("abc.mkv")
-    time.sleep(15)
+    # while True:
+    #     if image_arr is not None:   
+    #         cv2.imshow("appsink image arr", image_arr)
+    #         cv2.waitKey(1)        
+    time.sleep(150)
     videoCenter.Stop()
 
