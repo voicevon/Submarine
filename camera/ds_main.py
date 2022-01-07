@@ -464,6 +464,18 @@ class VideoCenter:
         # time.sleep(2)        
 
 # image_arr = None
+    @staticmethod
+    def YUV2RGB( yuv ):
+        
+        m = np.array([[ 1.0, 1.0, 1.0],
+                    [-0.000007154783816076815, -0.3441331386566162, 1.7720025777816772],
+                    [ 1.4019975662231445, -0.7141380310058594 , 0.00001542569043522235] ])
+        
+        rgb = np.dot(yuv,m)
+        rgb[:,:,0]-=179.45477266423404
+        rgb[:,:,1]+=135.45870971679688
+        rgb[:,:,2]-=226.8183044444304
+        return rgb
 
     @staticmethod
     def gst_to_opencv(sample):
@@ -474,7 +486,6 @@ class VideoCenter:
         width = caps.get_structure(0).get_value('width')
         buffer_size = buf.get_size()
         print ("format, width, height, buffer_size =  ", format, width, height, buffer_size)
-        return None
 
         arr = numpy.ndarray(
             (caps.get_structure(0).get_value('height'),
@@ -486,9 +497,9 @@ class VideoCenter:
 
     @staticmethod
     def new_buffer(sink, data):
-        # VideoCenter.cv_counter += 1
-        # if VideoCenter.cv_counter < 100:
-        #     return Gst.FlowReturn.OK
+        VideoCenter.cv_counter += 1
+        if VideoCenter.cv_counter < 100:
+            return Gst.FlowReturn.OK
         VideoCenter.cv_counter = 0        
         global image_arr
         sample = sink.emit("pull-sample")
@@ -530,14 +541,14 @@ class VideoCenter:
             print("output to screen link      source_pad.link(sinkpad)= ", a)
         # a = tee.link(q1) 
         # b = nvvidconv.link(nvvidconv)
-        nvvidconv.set_property("format")
+        # nvvidconv.set_property("format")
 
         appsink.set_property("max-buffers", 10000000)
         appsink.set_property("drop", True)
         # # sink.set_property("sync", False)
         # caps = Gst.caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}")
-        # caps = Gst.caps_from_string("video/x-raw,format=RGB,width=640,height=480")
-        # appsink.set_property("caps", caps)
+        caps = Gst.caps_from_string("video/x-raw,format=RGBA,width=640,height=480")
+        appsink.set_property("caps", caps)
         appsink.set_property("emit-signals", True)
         appsink.set_property("async", False)
         appsink.connect("new-sample", VideoCenter.new_buffer, appsink)   
@@ -689,10 +700,11 @@ if __name__ == '__main__':
     videoCenter = VideoCenter()
     VideoCenter.CreatePipline(videoCenter.uris, out_to_screen=True, out_to_file=True, out_to_opencv=True, out_to_rtsp=False )
     videoCenter.Start("abc.mkv")
-    # while True:
-    #     if image_arr is not None:   
-    #         cv2.imshow("appsink image arr", image_arr)
-    #         cv2.waitKey(1)        
+    while True:
+        if image_arr is not None:   
+            # print("-----",image_arr,"----------------")
+            cv2.imshow("appsink image arr", image_arr)
+            cv2.waitKey(1)        
     time.sleep(150)
     videoCenter.Stop()
 
