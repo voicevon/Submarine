@@ -463,19 +463,7 @@ class VideoCenter:
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  output to file links ",a,b,c,d,e,f,g,h)
         # time.sleep(2)        
 
-# image_arr = None
-    @staticmethod
-    def YUV2RGB( yuv ):
-        
-        m = np.array([[ 1.0, 1.0, 1.0],
-                    [-0.000007154783816076815, -0.3441331386566162, 1.7720025777816772],
-                    [ 1.4019975662231445, -0.7141380310058594 , 0.00001542569043522235] ])
-        
-        rgb = np.dot(yuv,m)
-        rgb[:,:,0]-=179.45477266423404
-        rgb[:,:,1]+=135.45870971679688
-        rgb[:,:,2]-=226.8183044444304
-        return rgb
+
 
     @staticmethod
     def gst_to_opencv(sample):
@@ -485,12 +473,9 @@ class VideoCenter:
         height = caps.get_structure(0).get_value('height')
         width = caps.get_structure(0).get_value('width')
         buffer_size = buf.get_size()
-        print ("format, width, height, buffer_size =  ", format, width, height, buffer_size)
-
+        # print ("format, width, height, buffer_size =  ", format, width, height, buffer_size)
         arr = numpy.ndarray(
-            (caps.get_structure(0).get_value('height'),
-            caps.get_structure(0).get_value('width'),
-            3),
+            (height, width, 4),
             buffer=buf.extract_dup(0, buf.get_size()),
             dtype=numpy.uint8)
         return arr
@@ -498,15 +483,16 @@ class VideoCenter:
     @staticmethod
     def new_buffer(sink, data):
         VideoCenter.cv_counter += 1
-        if VideoCenter.cv_counter < 100:
+        if VideoCenter.cv_counter < 1:
             return Gst.FlowReturn.OK
-        VideoCenter.cv_counter = 0        
+        VideoCenter.cv_counter = 0  
         global image_arr
         sample = sink.emit("pull-sample")
-        # buf = sample.get_buffer()
-        # print "Timestamp: ", buf.pts
-        arr = VideoCenter.gst_to_opencv(sample)
-        image_arr = arr
+        image_arr = VideoCenter.gst_to_opencv(sample)
+        # if image_arr is not None:   
+        #     # print("-----",image_arr,"----------------")
+        #     cv2.imshow("appsink image arr", image_arr)
+        #     cv2.waitKey(1)  
 
         return Gst.FlowReturn.OK
 
@@ -543,11 +529,12 @@ class VideoCenter:
         # b = nvvidconv.link(nvvidconv)
         # nvvidconv.set_property("format")
 
-        appsink.set_property("max-buffers", 10000000)
+        appsink.set_property("max-buffers", 2)
         appsink.set_property("drop", True)
         # # sink.set_property("sync", False)
         # caps = Gst.caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}")
         caps = Gst.caps_from_string("video/x-raw,format=RGBA,width=640,height=480")
+        # caps = Gst.caps_from_string("video/x-raw,format=(string){BGRA},width=640,height=480")
         appsink.set_property("caps", caps)
         appsink.set_property("emit-signals", True)
         appsink.set_property("async", False)
@@ -704,7 +691,8 @@ if __name__ == '__main__':
         if image_arr is not None:   
             # print("-----",image_arr,"----------------")
             cv2.imshow("appsink image arr", image_arr)
-            cv2.waitKey(1)        
-    time.sleep(150)
+            cv2.waitKey(1)  
+      
+    time.sleep(50)
     videoCenter.Stop()
 
