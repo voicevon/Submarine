@@ -21,6 +21,9 @@ import configparser
 import argparse
 
 from common.FPS import GETFPS
+import cv2
+import numpy
+
 
 fps_streams = {}
 
@@ -39,12 +42,15 @@ OSD_PROCESS_MODE =  0
 OSD_DISPLAY_TEXT =  1
 pgie_classes_str =  ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 
+image_arr = None
+
 # tiler_sink_pad_buffer_probe  will extract metadata received on OSD sink pad
 # and update params for drawing rectangle, object information etc.
 class VideoCenter:
     pipeline = None  # Gst.Pipeline()
     recording_start_at = 0
     filesink = None
+    cv_counter = 0
 
     def __init__(self) -> None:
         self.uris = list()
@@ -248,9 +254,9 @@ class VideoCenter:
         return nvvidconv
 
     @staticmethod
-    def make_nvosd():
+    def make_nvosd(name):
         print("Creating nvosd \n ")
-        nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
+        nvosd = Gst.ElementFactory.make("nvdsosd", name)
         if not nvosd:
             sys.stderr.write(" Unable to create nvosd \n")
         nvosd.set_property('process-mode',OSD_PROCESS_MODE)
@@ -289,9 +295,9 @@ class VideoCenter:
         return encoder
 
     @staticmethod
-    def make_nvtransform():
+    def make_nvtransform(name):
         print("Creating nvtransform")
-        transform = Gst.ElementFactory.make("nvegltransform","nvegltransform")
+        transform = Gst.ElementFactory.make("nvegltransform",name)
         if not transform:
             sys.stderr.write("  Unable to create nvegltransform")
         return transform
@@ -353,6 +359,14 @@ class VideoCenter:
         return sink
 
     @staticmethod
+    def make_app_sink():
+        print("Creating appsink")
+        sink = Gst.ElementFactory.make("appsink", "appsink")
+        if not sink:
+            sys.stderr.write("  Unable to create appsink")
+        return sink        
+
+    @staticmethod
     def make_tee():
         print("Creating tee")
         tee = Gst.ElementFactory.make("tee", "tee")
@@ -370,8 +384,8 @@ class VideoCenter:
 
     @staticmethod
     def link_output_screen(tee):
-        nvosd = VideoCenter.make_nvosd()
-        transform = VideoCenter.make_nvtransform()
+        nvosd = VideoCenter.make_nvosd("nvosd")
+        transform = VideoCenter.make_nvtransform("transform")
         q1 =  VideoCenter.make_queue("q1")
         nvsink = VideoCenter.make_nveglglessink()
         VideoCenter.pipeline.add(nvsink)
@@ -415,6 +429,7 @@ class VideoCenter:
         mkvmux = VideoCenter.make_mkvmux()
         VideoCenter.filesink = VideoCenter.make_file_sink()
         VideoCenter.filesink.set_property("location","~/tempvideo.mkv")
+        VideoCenter.filesink.set_property("async", False)
         # VideoCenter.pipeline.add(nvosd)
         # VideoCenter.pipeline.add(transform)
         VideoCenter.pipeline.add(nvvidconv_postosd)
@@ -448,22 +463,105 @@ class VideoCenter:
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  output to file links ",a,b,c,d,e,f,g,h)
         # time.sleep(2)        
 
+
+
     @staticmethod
-    def CreatePipline(uris, out_to_screen=True, out_to_file=True,out_to_rtsp=False):
-        # Check input arguments
+    def gst_to_opencv(sample):
+        buf = sample.get_buffer()
+        caps = sample.get_caps()
+        format = caps.get_structure(0).get_value('format')
+        height = caps.get_structure(0).get_value('height')
+        width = caps.get_structure(0).get_value('width')
+        buffer_size = buf.get_size()
+        # print ("format, width, height, buffer_size =  ", format, width, height, buffer_size)
+        arr = numpy.ndarray(
+            (height, width, 4),
+            buffer=buf.extract_dup(0, buf.get_size()),
+            dtype=numpy.uint8)
+        arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
+        return arr
+
+    @staticmethod
+    def new_buffer(sink, data):
+        VideoCenter.cv_counter += 1
+        if VideoCenter.cv_counter < 1:
+            return Gst.FlowReturn.OK
+        VideoCenter.cv_counter = 0  
+        global image_arr
+        sample = sink.emit("pull-sample")
+        image_arr = VideoCenter.gst_to_opencv(sample)
+        # if image_arr is not None:   
+        #     # print("-----",image_arr,"----------------")
+        #     cv2.imshow("appsink image arr", image_arr)
+        #     cv2.waitKey(1)  
+
+        return Gst.FlowReturn.OK
+
+    @staticmethod
+    def link_output_opencv(tee):
+        # https://gist.github.com/cbenhagen/76b24573fa63e7492fb6
+        # https://stackoverflow.com/questions/10403588/adding-opencv-processing-to-gstreamer-application
+        # http://lifestyletransfer.com/how-to-use-gstreamer-appsink-in-python/
+        # https://forums.developer.nvidia.com/t/feeding-nv12-into-opencv2/167626
+        # https://forums.developer.nvidia.com/t/convert-nv12-to-rgb-in-deepstream-pipeline/169957/8
+        # https://gist.github.com/CasiaFan/684ec8c36624fb5ff61360c71ee9e4ec
+        #       https://gist.github.com/Tutorgaming/55490ac88a3d91302be1d8fd44ac8055
+
+        # nvosd_cv = VideoCenter.make_nvosd("osd_cv")
+        # transform_cv = VideoCenter.make_nvtransform("transform_cv")
+        appsink = VideoCenter.make_app_sink()
+        VideoCenter.pipeline.add(appsink)
+        # VideoCenter.pipeline.add(nvosd_cv)
+        # VideoCenter.pipeline.add(transform_cv)
+        nvvidconv = VideoCenter.make_nvvidconv("nvvidconv_cv")
+        VideoCenter.pipeline.add(nvvidconv)
+
+
+        source_pad = tee.get_request_pad('src_3')
+        if not source_pad:
+            print("   Unable to get_request_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+        sink_pad = nvvidconv.get_static_pad("sink")  
+        if not sink_pad:
+            print("   Unable to get_static_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+        a = source_pad.link(sink_pad)
+        if a != Gst.PadLinkReturn.OK:
+            print("output to screen link      source_pad.link(sinkpad)= ", a)
+        # a = tee.link(q1) 
+        # b = nvvidconv.link(nvvidconv)
+        # nvvidconv.set_property("format")
+        # caps = Gst.caps_from_string("video/x-raw,format=BGRA,width=640,height=480")
+        # nvvidconv.set_property("caps", caps)
+        
+
+        appsink.set_property("max-buffers", 2)
+        appsink.set_property("drop", True)
+        # # sink.set_property("sync", False)
+        # caps = Gst.caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}")
+        caps = Gst.caps_from_string("video/x-raw,format=RGBA,width=640,height=480")
+        # caps = Gst.caps_from_string("video/x-raw,format=BGR,width=640,height=480")
+        appsink.set_property("caps", caps)
+        appsink.set_property("emit-signals", True)
+        appsink.set_property("async", False)
+        appsink.connect("new-sample", VideoCenter.new_buffer, appsink)   
+
+
+        b=c=d=e = nvvidconv.link(appsink)
+        # d = nvosd_cv.link(transform_cv)
+        # e = transform_cv.link(appsink)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>> To opencv links   ", a,b,c,d,e)
+        # time.sleep(6) 
+        
+    @staticmethod
+    def CreatePipline(uris, out_to_screen=True, out_to_file=True, out_to_opencv=True,out_to_rtsp=False):
         for i in range(0, len(uris)):
             fps_streams["stream{0}".format(i)] = GETFPS(i)
         number_sources = len(uris)
 
-        # Standard GStreamer initialization
         GObject.threads_init()
         Gst.init(None)
 
-        # Create gstreamer elements */
-        # Create Pipeline element that will form a connection of other elements
         print("Creating Pipeline \n ")
         VideoCenter.pipeline = Gst.Pipeline()
-
         if not VideoCenter.pipeline:
             sys.stderr.write(" Unable to create Pipeline \n")
 
@@ -505,7 +603,7 @@ class VideoCenter:
             updsink_port_num = 5400
             transform = VideoCenter.make_nvtransform()
 
-            nvvidconv_postosd = VideoCenter.make_nvvidconv("nvvideoconvert_post")
+            nvvidconv_postosd = VideoCenter.make_nvvidconv("nvvideoconvert_post_rtsp")
             caps = VideoCenter.make_caps()
             encoder = VideoCenter.make_encoder()        
             parse = VideoCenter.make_h264parse()
@@ -530,7 +628,9 @@ class VideoCenter:
 
         if out_to_file:
             VideoCenter.link_ouput_file(tee)
-
+            
+        if out_to_opencv:
+            VideoCenter.link_output_opencv(tee)
 
 
         # create an event loop and feed gstreamer bus mesages to it
@@ -570,7 +670,6 @@ class VideoCenter:
         print("Starting pipeline \n")
         if VideoCenter.filesink:
             VideoCenter.filesink.set_property("location", filesink_location)
-            VideoCenter.filesink.set_property("async",False)
             print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>   File will be saved as ", filesink_location)
             # time.sleep(3)
         x = VideoCenter.pipeline.set_state(Gst.State.PLAYING)
@@ -590,8 +689,14 @@ class VideoCenter:
 
 if __name__ == '__main__':
     videoCenter = VideoCenter()
-    VideoCenter.CreatePipline(videoCenter.uris, out_to_screen=True, out_to_file=True, out_to_rtsp=False )
+    VideoCenter.CreatePipline(videoCenter.uris, out_to_screen=True, out_to_file=True, out_to_opencv=True, out_to_rtsp=False )
     videoCenter.Start("abc.mkv")
-    time.sleep(15)
+    while True:
+        if image_arr is not None:   
+            # print("-----",image_arr,"----------------")
+            cv2.imshow("appsink image arr", image_arr)
+            cv2.waitKey(1)  
+      
+    time.sleep(50)
     videoCenter.Stop()
 
