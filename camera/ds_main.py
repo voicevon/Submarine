@@ -478,6 +478,7 @@ class VideoCenter:
             (height, width, 4),
             buffer=buf.extract_dup(0, buf.get_size()),
             dtype=numpy.uint8)
+        arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
         return arr
 
     @staticmethod
@@ -528,13 +529,16 @@ class VideoCenter:
         # a = tee.link(q1) 
         # b = nvvidconv.link(nvvidconv)
         # nvvidconv.set_property("format")
+        # caps = Gst.caps_from_string("video/x-raw,format=BGRA,width=640,height=480")
+        # nvvidconv.set_property("caps", caps)
+        
 
         appsink.set_property("max-buffers", 2)
         appsink.set_property("drop", True)
         # # sink.set_property("sync", False)
         # caps = Gst.caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}")
         caps = Gst.caps_from_string("video/x-raw,format=RGBA,width=640,height=480")
-        # caps = Gst.caps_from_string("video/x-raw,format=(string){BGRA},width=640,height=480")
+        # caps = Gst.caps_from_string("video/x-raw,format=BGR,width=640,height=480")
         appsink.set_property("caps", caps)
         appsink.set_property("emit-signals", True)
         appsink.set_property("async", False)
