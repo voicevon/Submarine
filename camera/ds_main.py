@@ -515,17 +515,25 @@ class VideoCenter:
         # VideoCenter.pipeline.add(transform_cv)
         nvvidconv = VideoCenter.make_nvvidconv("nvvidconv_cv")
         VideoCenter.pipeline.add(nvvidconv)
+        # videorate=Gst.ElementFactory.make("videorate","videorate")
+        # if not videorate:
+        #     print(" Unable to create videorate......")
+        #     time.sleep(10)
+        # VideoCenter.pipeline.add(videorate)
 
 
         source_pad = tee.get_request_pad('src_3')
         if not source_pad:
             print("   Unable to get_request_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+        # sink_pad = videorate.get_static_pad("sink")  
         sink_pad = nvvidconv.get_static_pad("sink")  
         if not sink_pad:
             print("   Unable to get_static_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
         a = source_pad.link(sink_pad)
         if a != Gst.PadLinkReturn.OK:
             print("output to screen link      source_pad.link(sinkpad)= ", a)
+        # videorate.set_property("rate",1)
+        # b=c=videorate.link(nvvidconv)
         # a = tee.link(q1) 
         # b = nvvidconv.link(nvvidconv)
         # nvvidconv.set_property("format")
@@ -538,6 +546,7 @@ class VideoCenter:
         # # sink.set_property("sync", False)
         # caps = Gst.caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}")
         caps = Gst.caps_from_string("video/x-raw,format=RGBA,width=640,height=480")
+        # caps = Gst.caps_from_string("video/x-raw,format=RGBA,width=640,height=480 framerate=1/5")
         # caps = Gst.caps_from_string("video/x-raw,format=BGR,width=640,height=480")
         appsink.set_property("caps", caps)
         appsink.set_property("emit-signals", True)
@@ -548,7 +557,7 @@ class VideoCenter:
         b=c=d=e = nvvidconv.link(appsink)
         # d = nvosd_cv.link(transform_cv)
         # e = transform_cv.link(appsink)
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>> To opencv links   ", a,b,c,d,e)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>> To opencv links   ", a,b,"  c= ",c,d,e)
         # time.sleep(6) 
         
     @staticmethod
@@ -695,7 +704,7 @@ if __name__ == '__main__':
         if image_arr is not None:   
             # print("-----",image_arr,"----------------")
             cv2.imshow("appsink image arr", image_arr)
-            cv2.waitKey(1)  
+            cv2.waitKey(50)  
       
     time.sleep(50)
     videoCenter.Stop()
