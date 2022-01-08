@@ -689,23 +689,26 @@ class VideoCenter:
     def Stop():
         VideoCenter.pipeline.set_state(Gst.State.NULL)
 
-
-    def SpinOnce(self):
-        now = 100
-        start_timestamp = VideoCenter.recording_start_at
-        if now - start_timestamp > 120:
-            VideoCenter.Stop()
-
+    @staticmethod
+    def SpinOnce():
+        if image_arr is not None:   
+            # print("-----",image_arr,"----------------")
+            cv2.imshow("appsink image arr", image_arr)
+        cv2.waitKey(50)  
+    
 if __name__ == '__main__':
     videoCenter = VideoCenter()
     VideoCenter.CreatePipline(videoCenter.uris, out_to_screen=True, out_to_file=True, out_to_opencv=True, out_to_rtsp=False )
     videoCenter.Start("abc.mkv")
+    cc = 1
     while True:
-        if image_arr is not None:   
-            # print("-----",image_arr,"----------------")
-            cv2.imshow("appsink image arr", image_arr)
-            cv2.waitKey(50)  
-      
-    time.sleep(50)
+        VideoCenter.SpinOnce()
+        cc += 1
+        if cc > 25 * 10:
+            break
+            # pass
+    # start_timestamp = VideoCenter.recording_start_at
+    # if now - start_timestamp > 120:
+    #     VideoCenter.Stop()
     videoCenter.Stop()
 
