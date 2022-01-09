@@ -9,7 +9,6 @@ import pyds
 from common.bus_call import bus_call
 # from common.is_aarch_64 import is_aarch64
 # import platform
-import math
 import time
 from ctypes import *
 import gi
@@ -23,6 +22,8 @@ import argparse
 from common.FPS import GETFPS
 import cv2
 import numpy
+
+from elements_jetson import ElementJetson
 
 
 fps_streams = {}
@@ -197,202 +198,18 @@ class VideoCenter:
         return nbin
 
 
-    @staticmethod
-    def make_streammux(number_sources):
-        print("Creating streamux \n ")
-        # Create nvstreammux instance to form batches from one or more sources.
-        streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
-        if not streammux:
-            sys.stderr.write(" Unable to create NvStreamMux \n")
-        streammux.set_property('live-source', 1)
-        streammux.set_property("width", 1920)
-        streammux.set_property("height", 1080)
-        streammux.set_property("batch-size", number_sources)
-        streammux.set_property("batched-push-timeout", 4000000)        
-        return streammux
-        
-    @staticmethod
-    def make_pgie(number_sources):
-        print("Creating Pgie \n ")
-        pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
-        if not pgie:
-            sys.stderr.write(" Unable to create pgie \n")
-        pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
-
-        pgie_batch_size = pgie.get_property("batch-size")
-        if pgie_batch_size !=  number_sources:
-            print(
-                "WARNING: Overriding infer-config batch-size",
-                pgie_batch_size,
-                " with number of sources ",
-                number_sources,
-                " \n",
-            )
-            pgie.set_property("batch-size", number_sources)        
-        return pgie
-
-    @staticmethod
-    def make_tiler(number_sources):
-        print("Creating tiler \n ")
-        tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
-        if not tiler:
-            sys.stderr.write(" Unable to create tiler \n")
-        tiler_rows = int(math.sqrt(number_sources))
-        tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
-        tiler.set_property("rows", tiler_rows)
-        tiler.set_property("columns", tiler_columns)
-        tiler.set_property("width", TILED_OUTPUT_WIDTH)
-        tiler.set_property("height", TILED_OUTPUT_HEIGHT)        
-        return tiler    
-
-    @staticmethod
-    def make_nvvidconv(name):
-        print("Creating nvvidconv \n ")
-        nvvidconv = Gst.ElementFactory.make("nvvideoconvert", name)
-        if not nvvidconv:
-            sys.stderr.write(" Unable to create nvvidconv \n")
-        return nvvidconv
-
-    @staticmethod
-    def make_nvosd(name):
-        print("Creating nvosd \n ")
-        nvosd = Gst.ElementFactory.make("nvdsosd", name)
-        if not nvosd:
-            sys.stderr.write(" Unable to create nvosd \n")
-        nvosd.set_property('process-mode',OSD_PROCESS_MODE)
-        nvosd.set_property('display-text',OSD_DISPLAY_TEXT)        
-        return nvosd
-
-    @staticmethod
-    def make_caps():
-        # Create a caps filter
-        caps = Gst.ElementFactory.make("capsfilter", "filter")
-        caps.set_property(
-            "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
-        )
-        return caps
-
-    @staticmethod
-    def make_rtppay():
-        # Make the payload-encode video into RTP packets
-        rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
-        print("Creating H264 rtppay")
-        if not rtppay:
-            sys.stderr.write(" Unable to create rtppay")
-        return rtppay
-        
-    @staticmethod
-    def make_encoder():
-        # Make the encoder
-        print("Creating H264 Encoder")
-        encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
-        if not encoder:
-            sys.stderr.write(" Unable to create encoder")
-        encoder.set_property("bitrate", 4000000)
-        encoder.set_property("preset-level", 1)
-        encoder.set_property("insert-sps-pps", 1)
-        encoder.set_property("bufapi-version", 1)
-        return encoder
-
-    @staticmethod
-    def make_nvtransform(name):
-        print("Creating nvtransform")
-        transform = Gst.ElementFactory.make("nvegltransform",name)
-        if not transform:
-            sys.stderr.write("  Unable to create nvegltransform")
-        return transform
-
-    @staticmethod
-    def make_mp4mux():
-        print("Creating mp4mux")
-        mux = Gst.ElementFactory.make("mp4mux","mp4mux")
-        if not mux:
-            sys.stderr.write("  Unable to create mp4mux")
-        return mux
-
-    @staticmethod
-    def make_mkvmux():
-        print("Creating mkvmux")
-        mux = Gst.ElementFactory.make("matroskamux","matroskamux")
-        if not mux:
-            sys.stderr.write("  Unable to create matroskamux")
-        return mux
-
-
-    @staticmethod
-    def make_h264parse():
-        print("Creating H264 parse")
-        parse = Gst.ElementFactory.make("h264parse","parse")
-        if not parse:
-            sys.stderr.write("  Unable to create h264parse")
-        return parse
-
-    @staticmethod
-    def make_nveglglessink():
-        print("Creating nveglessink")
-        sink = Gst.ElementFactory.make("nveglglessink","nveglglesink")
-        if not sink:
-            sys.stderr.write("  Unable to create nveglglessink")
-        return sink
-
-    @staticmethod
-    def make_udp_sink(updsink_port_num):
-        # Make the UDP sink
-        print("Creating udp sink")
-        sink = Gst.ElementFactory.make("udpsink", "udpsink")
-        if not sink:
-            sys.stderr.write(" Unable to create udpsink")
-
-        sink.set_property("host", "224.224.255.255")
-        sink.set_property("port", updsink_port_num)
-        sink.set_property("async", False)
-        sink.set_property("sync", 1)
-        sink.set_property("qos", 0)
-        return sink
-        
-    @staticmethod
-    def make_file_sink():
-        print("Creating filesink")
-        sink = Gst.ElementFactory.make("filesink", "filesink")
-        if not sink:
-            sys.stderr.write("  Unable to create filesink")
-        return sink
-
-    @staticmethod
-    def make_app_sink():
-        print("Creating appsink")
-        sink = Gst.ElementFactory.make("appsink", "appsink")
-        if not sink:
-            sys.stderr.write("  Unable to create appsink")
-        return sink        
-
-    @staticmethod
-    def make_tee():
-        print("Creating tee")
-        tee = Gst.ElementFactory.make("tee", "tee")
-        if not tee:
-            sys.stderr.write("  Unable to create tee")
-        return tee
-
-    @staticmethod
-    def make_queue(name):
-        print("Creating queue")
-        q = Gst.ElementFactory.make("tee", name)
-        if not q:
-            sys.stderr.write("  Unable to create tee, name=", name)
-        return q
 
     @staticmethod
     def link_output_screen(tee):
-        nvosd = VideoCenter.make_nvosd("nvosd")
-        transform = VideoCenter.make_nvtransform("transform")
-        q1 =  VideoCenter.make_queue("q1")
-        nvsink = VideoCenter.make_nveglglessink()
+        nvosd = ElementJetson.make_nvosd("nvosd",OSD_PROCESS_MODE, OSD_DISPLAY_TEXT)
+        transform = ElementJetson.make_nvtransform("transform")
+        q1 =  ElementJetson.make_queue("q1")
+        nvsink = ElementJetson.make_nveglglessink()
         VideoCenter.pipeline.add(nvsink)
         VideoCenter.pipeline.add(q1)
         VideoCenter.pipeline.add(nvosd)
         VideoCenter.pipeline.add(transform)
-        nvvidconv = VideoCenter.make_nvvidconv("nvvidconv")
+        nvvidconv = ElementJetson.make_nvvidconv("nvvidconv")
         VideoCenter.pipeline.add(nvvidconv)
 
 
@@ -418,16 +235,16 @@ class VideoCenter:
     def link_ouput_file(tee):
         # nvosd = VideoCenter.make_nvosd()
         # transform = VideoCenter.make_nvtransform()
-        q2 = VideoCenter.make_queue("q2")
+        q2 = ElementJetson.make_queue("q2")
         VideoCenter.pipeline.add(q2)
-        nvvidconv_postosd = VideoCenter.make_nvvidconv("nvvideoconvert_post")
-        caps = VideoCenter.make_caps()
-        encoder = VideoCenter.make_encoder()        
-        parse = VideoCenter.make_h264parse()
+        nvvidconv_postosd = ElementJetson.make_nvvidconv("nvvideoconvert_post")
+        caps = ElementJetson.make_caps()
+        encoder = ElementJetson.make_encoder()        
+        parse = ElementJetson.make_h264parse()
         # mp4mux = make_mp4mux()
         # filesink = make_file_sink()
-        mkvmux = VideoCenter.make_mkvmux()
-        VideoCenter.filesink = VideoCenter.make_file_sink()
+        mkvmux = ElementJetson.make_mkvmux()
+        VideoCenter.filesink = ElementJetson.make_file_sink()
         VideoCenter.filesink.set_property("location","~/tempvideo.mkv")
         VideoCenter.filesink.set_property("async", False)
         # VideoCenter.pipeline.add(nvosd)
@@ -509,11 +326,11 @@ class VideoCenter:
 
         # nvosd_cv = VideoCenter.make_nvosd("osd_cv")
         # transform_cv = VideoCenter.make_nvtransform("transform_cv")
-        appsink = VideoCenter.make_app_sink()
+        appsink = ElementJetson.make_app_sink()
         VideoCenter.pipeline.add(appsink)
         # VideoCenter.pipeline.add(nvosd_cv)
         # VideoCenter.pipeline.add(transform_cv)
-        nvvidconv = VideoCenter.make_nvvidconv("nvvidconv_cv")
+        nvvidconv = ElementJetson.make_nvvidconv("nvvidconv_cv")
         VideoCenter.pipeline.add(nvvidconv)
         # videorate=Gst.ElementFactory.make("videorate","videorate")
         # if not videorate:
@@ -574,7 +391,7 @@ class VideoCenter:
         if not VideoCenter.pipeline:
             sys.stderr.write(" Unable to create Pipeline \n")
 
-        streammux = VideoCenter.make_streammux(number_sources)
+        streammux = ElementJetson.make_streammux(number_sources)
         VideoCenter.pipeline.add(streammux)
         for i in range(number_sources):
             print("Creating source_bin ",i," \n ")
@@ -592,9 +409,9 @@ class VideoCenter:
                 sys.stderr.write("Unable to create src pad bin \n")
             srcpad.link(sinkpad)
 
-        pgie = VideoCenter.make_pgie(number_sources)
-        tiler = VideoCenter.make_tiler(number_sources)
-        tee = VideoCenter.make_tee()
+        pgie = ElementJetson.make_pgie(number_sources)
+        tiler = ElementJetson.make_tiler(number_sources)
+        tee = ElementJetson.make_tee()
 
 
         print("Adding elements to Pipeline \n")
@@ -610,14 +427,14 @@ class VideoCenter:
 
         if out_to_rtsp:
             updsink_port_num = 5400
-            transform = VideoCenter.make_nvtransform()
+            transform = ElementJetson.make_nvtransform()
 
-            nvvidconv_postosd = VideoCenter.make_nvvidconv("nvvideoconvert_post_rtsp")
-            caps = VideoCenter.make_caps()
-            encoder = VideoCenter.make_encoder()        
-            parse = VideoCenter.make_h264parse()
-            rtppay  = VideoCenter.make_rtppay()
-            udp_sink = VideoCenter.make_udp_sink(updsink_port_num)
+            nvvidconv_postosd = ElementJetson.make_nvvidconv("nvvideoconvert_post_rtsp")
+            caps = ElementJetson.make_caps()
+            encoder = ElementJetson.make_encoder()        
+            parse = ElementJetson.make_h264parse()
+            rtppay  = ElementJetson.make_rtppay()
+            udp_sink = ElementJetson.make_udp_sink(updsink_port_num)
 
             VideoCenter.pipeline.add(transform)
             VideoCenter.pipeline.add(nvvidconv_postosd)
