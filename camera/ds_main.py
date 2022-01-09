@@ -10,8 +10,8 @@ import time
 from ctypes import *
 import gi
 gi.require_version("Gst", "1.0")
-gi.require_version("GstRtspServer", "1.0")
-from gi.repository import GObject, Gst, GstRtspServer, GLib
+
+from gi.repository import GObject, Gst, GLib
 
 from common.FPS import GETFPS
 # import cv2
@@ -21,6 +21,7 @@ from elements_jetson import ElementJetson
 from br_file_saver import FileSaver
 from br_output_on_screen import ScreenPlayer
 from br_opencv import AppOpenCV
+from br_rtsp_out import RtspOutput
 
 fps_streams = {}
 
@@ -243,36 +244,11 @@ class VideoCenter:
 
         if out_to_screen:
             # videoCenter.link_output_screen(tee)
-            ScreenPlayer.CreateBranch(VideoCenter.pipeline, tee, OSD_PROCESS_MODE, OSD_DISPLAY_TEXT)
+            ScreenPlayer.CreatePipelineBranch(VideoCenter.pipeline, tee, OSD_PROCESS_MODE, OSD_DISPLAY_TEXT)
 
 
         if out_to_rtsp:
-            updsink_port_num = 5400
-            transform = ElementJetson.make_nvtransform()
-
-            nvvidconv_postosd = ElementJetson.make_nvvidconv("nvvideoconvert_post_rtsp")
-            caps = ElementJetson.make_caps()
-            encoder = ElementJetson.make_encoder()        
-            parse = ElementJetson.make_h264parse()
-            rtppay  = ElementJetson.make_rtppay()
-            udp_sink = ElementJetson.make_udp_sink(updsink_port_num)
-
-            VideoCenter.pipeline.add(transform)
-            VideoCenter.pipeline.add(nvvidconv_postosd)
-            VideoCenter.pipeline.add(caps)
-            VideoCenter.pipeline.add(encoder)
-            VideoCenter.pipeline.add(parse)
-            VideoCenter.pipeline.add(rtppay)
-            VideoCenter.pipeline.add(udp_sink)
-
-            streammux.link(nvvidconv)
-            nvvidconv.link(tiler)
-            tiler.link(nvvidconv_postosd)
-            nvvidconv_postosd.link(caps)
-            caps.link(encoder)
-            encoder.link(rtppay)
-            rtppay.link(udp_sink)
-
+            RtspOutput.CreatePipelineBranch(VideoCenter.pipeline,tee)
         if out_to_file:
             FileSaver.CreatePipilineBranch(VideoCenter.pipeline, tee)
             
@@ -293,25 +269,7 @@ class VideoCenter:
             tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, VideoCenter.tiler_src_pad_buffer_probe, 0)
 
         if out_to_rtsp:
-            # Start streaming
-            rtsp_port_num = 8554
-
-            server = GstRtspServer.RTSPServer.new()
-            server.props.service = "%d" % rtsp_port_num
-            server.attach(None)
-
-            factory = GstRtspServer.RTSPMediaFactory.new()
-            factory.set_launch(
-                '( udpsrc name = pay0 port = %d buffer-size = 524288 caps = "application/x-rtp, media = video, clock-rate = 90000, encoding-name = (string)%s, payload = 96 " )'
-                % (updsink_port_num, "H264")
-            )
-            factory.set_shared(True)
-            server.get_mount_points().add_factory("/ds-test", factory)
-
-            print(
-                "\n *** DeepStream: Launched RTSP Streaming at rtsp://localhost:%d/ds-test ***\n\n"
-                % rtsp_port_num
-            )
+            RtspOutput.StartStreaming()
     @staticmethod
     def Start(file_path_name_to_be_saved):
         print("Starting pipeline \n")
@@ -337,7 +295,7 @@ if __name__ == '__main__':
     while True:
         VideoCenter.SpinOnce()
         cc += 1
-        if cc > 25 * 10:
+        if cc > 25 * 100:
             break
             # pass
     # start_timestamp = VideoCenter.recording_start_at

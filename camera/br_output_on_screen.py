@@ -7,7 +7,7 @@ from gi.repository import Gst
 class ScreenPlayer:
 
     @staticmethod
-    def CreateBranch(pipeline, tee, OSD_PROCESS_MODE,OSD_DISPLAY_TEXT):
+    def CreatePipelineBranch(pipeline, tee, OSD_PROCESS_MODE,OSD_DISPLAY_TEXT):
         nvosd = ElementJetson.make_nvosd("nvosd",OSD_PROCESS_MODE, OSD_DISPLAY_TEXT)
         transform = ElementJetson.make_nvtransform("transform")
         q1 =  ElementJetson.make_queue("q1")

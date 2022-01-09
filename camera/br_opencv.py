@@ -68,9 +68,10 @@ class AppOpenCV:
         # VideoCenter.pipeline.add(videorate)
 
 
-        source_pad = tee.get_request_pad('src_3')
+        source_pad = tee.get_request_pad('src_4')
         if not source_pad:
             print("   Unable to get_request_pad() XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ")
+
         # sink_pad = videorate.get_static_pad("sink")  
         sink_pad = nvvidconv.get_static_pad("sink")  
         if not sink_pad:
