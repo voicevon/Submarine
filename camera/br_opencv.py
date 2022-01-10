@@ -9,6 +9,10 @@ image_arr = None
 
 class AppOpenCV:
     cv_counter = 0
+    window_title="OpenCV"
+
+    # def __init__(self) -> None:
+    #     self.window_title="OpenCV"
 
     @staticmethod
     def gst_to_opencv(sample):
@@ -112,6 +116,6 @@ class AppOpenCV:
         global image_arr
         if image_arr is not None:   
             # print("-----",image_arr,"----------------")
-            cv2.imshow("OpenCV", image_arr)
+            cv2.imshow(AppOpenCV.window_title, image_arr)
             image_arr = None
         cv2.waitKey(50)  

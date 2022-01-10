@@ -260,7 +260,8 @@ class CvStream:
             tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, CvStream.tiler_src_pad_buffer_probe, 0)
 
     @staticmethod
-    def Start():
+    def Start(window_title):
+        AppOpenCV.window_title = window_title
         print("Starting pipeline \n")
         x = CvStream.pipeline.set_state(Gst.State.PLAYING)
 
