@@ -16,10 +16,10 @@ from gi.repository import GObject, Gst, GLib
 from common.FPS import GETFPS
 
 from elements_jetson import ElementJetson
-from br_file_saver import FileSaver
+# from br_file_saver import FileSaver
 from br_output_on_screen import ScreenPlayer
 from br_opencv import AppOpenCV
-from br_rtsp_out import RtspOutput
+# from br_rtsp_out import RtspOutput
 
 fps_streams = {}
 
@@ -41,7 +41,7 @@ pgie_classes_str =  ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 
 # tiler_sink_pad_buffer_probe  will extract metadata received on OSD sink pad
 # and update params for drawing rectangle, object information etc.
-class VideoCenter:
+class CvStream:
     pipeline = None  # Gst.Pipeline()
     recording_start_at = 0
     # filesink = None
@@ -49,13 +49,13 @@ class VideoCenter:
 
     def __init__(self) -> None:
         self.uris = list()
-        for i in range(5):
+        for i in range(1):
             self.uris.append('')
-        self.uris[0] = "rtsp://admin:a@192.168.1.81"
-        self.uris[1] = "rtsp://admin:a@192.168.1.82"
-        self.uris[2] = "rtsp://admin:a@192.168.1.83"
-        self.uris[3] = "rtsp://admin:a@192.168.1.84"
-        self.uris[4] = "rtsp://admin:a@192.168.1.86"
+        # self.uris[0] = "rtsp://admin:a@192.168.1.81"
+        self.uris[0] = "rtsp://admin:a@192.168.1.82"
+        # self.uris[2] = "rtsp://admin:a@192.168.1.83"
+        # self.uris[3] = "rtsp://admin:a@192.168.1.84"
+        # self.uris[4] = "rtsp://admin:a@192.168.1.86"
         # self.uris[5] = "rtsp://admin:a@192.168.1.86"
 
     def StartStop(self, cameras):
@@ -152,7 +152,7 @@ class VideoCenter:
     def decodebin_child_added(child_proxy,Object,name,user_data):
         print("Decodebin child added:", name, "\n")
         if(name.find("decodebin") !=  -1):
-            Object.connect("child-added",VideoCenter.decodebin_child_added,user_data)
+            Object.connect("child-added",CvStream.decodebin_child_added,user_data)
 
     @staticmethod
     def create_source_bin(index,uri):
@@ -176,8 +176,8 @@ class VideoCenter:
         uri_decode_bin.set_property("uri",uri)
         # Connect to the "pad-added" signal of the decodebin which generates a
         # callback once a new pad for raw data has beed created by the decodebin
-        uri_decode_bin.connect("pad-added", VideoCenter.cb_newpad,nbin)
-        uri_decode_bin.connect("child-added", VideoCenter.decodebin_child_added,nbin)
+        uri_decode_bin.connect("pad-added", CvStream.cb_newpad,nbin)
+        uri_decode_bin.connect("child-added", CvStream.decodebin_child_added,nbin)
 
         # We need to create a ghost pad for the source bin which will act as a proxy
         # for the video decoder src pad. The ghost pad will not have a target right
@@ -194,7 +194,7 @@ class VideoCenter:
 
         
     @staticmethod
-    def CreatePipline(uris, out_to_screen=True, out_to_file=True, out_to_opencv=True,out_to_rtsp=False):
+    def CreatePipline(uris, out_to_screen=True, out_to_opencv=True):
         for i in range(0, len(uris)):
             fps_streams["stream{0}".format(i)] = GETFPS(i)
         number_sources = len(uris)
@@ -203,19 +203,19 @@ class VideoCenter:
         Gst.init(None)
 
         print("Creating Pipeline \n ")
-        VideoCenter.pipeline = Gst.Pipeline()
-        if not VideoCenter.pipeline:
+        CvStream.pipeline = Gst.Pipeline()
+        if not CvStream.pipeline:
             sys.stderr.write(" Unable to create Pipeline \n")
 
         streammux = ElementJetson.make_streammux(number_sources)
-        VideoCenter.pipeline.add(streammux)
+        CvStream.pipeline.add(streammux)
         for i in range(number_sources):
             print("Creating source_bin ",i," \n ")
             uri_name = uris[i]
-            source_bin = VideoCenter.create_source_bin(i, uri_name)
+            source_bin = CvStream.create_source_bin(i, uri_name)
             if not source_bin:
                 sys.stderr.write("Unable to create source bin \n")
-            VideoCenter.pipeline.add(source_bin)
+            CvStream.pipeline.add(source_bin)
             padname = "sink_%u" %i
             sinkpad =  streammux.get_request_pad(padname)
             if not sinkpad:
@@ -232,29 +232,24 @@ class VideoCenter:
 
         print("Adding elements to Pipeline \n")
         # pipeline.add(pgie)
-        VideoCenter.pipeline.add(tiler)
-        VideoCenter.pipeline.add(tee)
+        CvStream.pipeline.add(tiler)
+        CvStream.pipeline.add(tee)
 
         streammux.link(tiler)
         tiler.link(tee)
 
         if out_to_screen:
             # videoCenter.link_output_screen(tee)
-            ScreenPlayer.CreatePipelineBranch(VideoCenter.pipeline, tee, OSD_PROCESS_MODE, OSD_DISPLAY_TEXT)
+            ScreenPlayer.CreatePipelineBranch(CvStream.pipeline, tee, OSD_PROCESS_MODE, OSD_DISPLAY_TEXT)
 
-
-        if out_to_rtsp:
-            RtspOutput.CreatePipelineBranch(VideoCenter.pipeline,tee)
-        if out_to_file:
-            FileSaver.CreatePipilineBranch(VideoCenter.pipeline, tee)
             
         if out_to_opencv:
-            AppOpenCV.CreatePiplineBranch(VideoCenter.pipeline, tee)
+            AppOpenCV.CreatePiplineBranch(CvStream.pipeline, tee)
 
 
         # create an event loop and feed gstreamer bus mesages to it
         loop = GObject.MainLoop()
-        bus = VideoCenter.pipeline.get_bus()
+        bus = CvStream.pipeline.get_bus()
         bus.add_signal_watch()
         bus.connect ("message", bus_call, loop)
 
@@ -262,21 +257,17 @@ class VideoCenter:
         if not tiler_src_pad:
             sys.stderr.write(" Unable to get src pad \n")
         else:
-            tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, VideoCenter.tiler_src_pad_buffer_probe, 0)
+            tiler_src_pad.add_probe(Gst.PadProbeType.BUFFER, CvStream.tiler_src_pad_buffer_probe, 0)
 
-        if out_to_rtsp:
-            RtspOutput.StartStreaming()
     @staticmethod
-    def Start(file_path_name_to_be_saved):
+    def Start():
         print("Starting pipeline \n")
-        FileSaver.UpdateFileLocation(file_path_name_to_be_saved)
-        x = VideoCenter.pipeline.set_state(Gst.State.PLAYING)
-        print("================================================================",x)
-        VideoCenter.recording_start_at = 0
+        x = CvStream.pipeline.set_state(Gst.State.PLAYING)
+
 
     @staticmethod
     def Stop():
-        VideoCenter.pipeline.set_state(Gst.State.NULL)
+        CvStream.pipeline.set_state(Gst.State.NULL)
 
     @staticmethod
     def SpinOnce():
@@ -284,18 +275,16 @@ class VideoCenter:
         # cv2.waitKey(50)  
     
 if __name__ == '__main__':
-    videoCenter = VideoCenter()
-    VideoCenter.CreatePipline(videoCenter.uris, out_to_screen=True, out_to_file=True, out_to_opencv=True, out_to_rtsp=False )
-    videoCenter.Start("abc.mkv")
+    stream = CvStream()
+    CvStream.CreatePipline(stream.uris, out_to_screen=True, out_to_opencv=True)
+    CvStream.Start()
     cc = 1
     while True:
-        VideoCenter.SpinOnce()
+        CvStream.SpinOnce()
         cc += 1
         if cc > 25 * 100:
             break
             # pass
-    # start_timestamp = VideoCenter.recording_start_at
-    # if now - start_timestamp > 120:
-    #     VideoCenter.Stop()
-    videoCenter.Stop()
+
+    CvStream.Stop()
 
