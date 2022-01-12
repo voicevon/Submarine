@@ -16,10 +16,9 @@ from gi.repository import GObject, Gst, GLib
 from common.FPS import GETFPS
 
 from elements_jetson import ElementJetson
-# from br_file_saver import FileSaver
 from br_output_on_screen import ScreenPlayer
 from br_opencv import AppOpenCV
-# from br_rtsp_out import RtspOutput
+import cv2
 
 fps_streams = {}
 
@@ -273,17 +272,17 @@ class CvStream:
     @staticmethod
     def SpinOnce():
         AppOpenCV.SpinOnce()
-        # cv2.waitKey(50)  
+        cv2.waitKey(50)  
     
 if __name__ == '__main__':
     stream = CvStream()
-    CvStream.CreatePipline(stream.uris, out_to_screen=True, out_to_opencv=True)
-    CvStream.Start()
+    CvStream.CreatePipline(stream.uris, out_to_screen=False, out_to_opencv=True)
+    CvStream.Start("Origin")
     cc = 1
     while True:
         CvStream.SpinOnce()
         cc += 1
-        if cc > 25 * 100:
+        if cc > 20*25:
             break
             # pass
 

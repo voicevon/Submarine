@@ -5,7 +5,7 @@ from gi.repository import Gst
 import numpy
 import cv2
 
-image_arr = None
+frame = None
 
 class AppOpenCV:
     cv_counter = 0
@@ -27,7 +27,8 @@ class AppOpenCV:
             (height, width, 4),
             buffer=buf.extract_dup(0, buf.get_size()),
             dtype=numpy.uint8)
-        arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
+        # arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
+        arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2RGB)
         return arr
 
     @staticmethod
@@ -36,9 +37,9 @@ class AppOpenCV:
         if AppOpenCV.cv_counter < 1:
             return Gst.FlowReturn.OK
         AppOpenCV.cv_counter = 0  
-        global image_arr
+        global frame
         sample = sink.emit("pull-sample")
-        image_arr = AppOpenCV.gst_to_opencv(sample)
+        frame = AppOpenCV.gst_to_opencv(sample)
         # This doen't work, Might because threding
         # if image_arr is not None:   
         #     # print("-----",image_arr,"----------------")
@@ -113,9 +114,28 @@ class AppOpenCV:
 
     @staticmethod
     def SpinOnce():
-        global image_arr
-        if image_arr is not None:   
+        global frame
+        if frame is not None:   
             # print("-----",image_arr,"----------------")
-            cv2.imshow(AppOpenCV.window_title, image_arr)
-            image_arr = None
+            # hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+            ksize = (5,5)
+            blur = cv2.blur(frame, ksize) 
+            red, green, blue = cv2.split(blur)
+            cv2.imshow("red",red)
+            cv2.imshow("green",green)
+            cv2.imshow("blue",blue)
+            lower_red = numpy.array([210])
+            upper_red = numpy.array([255])
+            
+            mask = cv2.inRange(red, lower_red, upper_red)
+            res = cv2.bitwise_and(blur,blur, mask= mask)
+
+            # cv2.imshow(AppOpenCV.window_title, frame)
+            # # cv2.imshow("hsv",hsv)
+            # cv2.imshow('blur',blur)
+            cv2.imshow('mask',mask)
+            cv2.imshow('result',res)
+
+
+        frame = None
         cv2.waitKey(50)  
