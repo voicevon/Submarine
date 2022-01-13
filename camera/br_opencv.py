@@ -111,31 +111,65 @@ class AppOpenCV:
         # e = transform_cv.link(appsink)
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>> To opencv links   ", a,b,"  c= ",c,d,e)
         # time.sleep(6) 
+        AppOpenCV.CreateHsvAdjuster()
+
+    @staticmethod
+    def CreateHsvAdjuster():
+        cv2.namedWindow("adjuster")
+        cv2.moveWindow("adjuster",100,0)
+
+        cv2.createTrackbar("lowH","adjuster",109,180, AppOpenCV.callback_do_nothing)
+        cv2.createTrackbar("upH","adjuster",145,180,AppOpenCV.callback_do_nothing)
+        cv2.createTrackbar("lowS","adjuster",0,255,AppOpenCV.callback_do_nothing)
+        cv2.createTrackbar("upS","adjuster",190,255,AppOpenCV.callback_do_nothing)
+        cv2.createTrackbar("lowV","adjuster",198,255,AppOpenCV.callback_do_nothing)
+        cv2.createTrackbar("upV","adjuster",255,255,AppOpenCV.callback_do_nothing)        
+
+    @staticmethod
+    def callback_do_nothing(value):
+            pass
+
+    @staticmethod
+    def GetHsvRange():
+        lowH = cv2.getTrackbarPos("lowH", "adjuster")
+        upH = cv2.getTrackbarPos("upH", "adjuster")
+        lowS = cv2.getTrackbarPos("lowS", "adjuster")
+        upS = cv2.getTrackbarPos("upS", "adjuster")
+        lowV = cv2.getTrackbarPos("lowV", "adjuster")
+        upV = cv2.getTrackbarPos("upV", "adjuster")
+        return [lowH,lowS,lowV], [upH,upS,upV]
 
     @staticmethod
     def SpinOnce():
         global frame
         if frame is not None:   
             # print("-----",image_arr,"----------------")
-            # hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
-            ksize = (5,5)
+            ksize = (2,2)
             blur = cv2.blur(frame, ksize) 
-            red, green, blue = cv2.split(blur)
-            cv2.imshow("red",red)
-            cv2.imshow("green",green)
-            cv2.imshow("blue",blue)
-            lower_red = numpy.array([210])
-            upper_red = numpy.array([255])
-            
-            mask = cv2.inRange(red, lower_red, upper_red)
-            res = cv2.bitwise_and(blur,blur, mask= mask)
+            cv2.imshow('blur',blur)
+            hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
+            if False:
+                red, green, blue = cv2.split(blur)
+                cv2.imshow("red",red)
+                cv2.imshow("green",green)
+                cv2.imshow("blue",blue)
+                lower_red = numpy.array([210])
+                upper_red = numpy.array([255])
+                
+                mask = cv2.inRange(red, lower_red, upper_red)
+                res = cv2.bitwise_and(blur,blur, mask= mask)
 
-            # cv2.imshow(AppOpenCV.window_title, frame)
-            # # cv2.imshow("hsv",hsv)
-            # cv2.imshow('blur',blur)
-            cv2.imshow('mask',mask)
-            cv2.imshow('result',res)
-
+                # cv2.imshow(AppOpenCV.window_title, frame)
+                # # cv2.imshow("hsv",hsv)
+                # cv2.imshow('blur',blur)
+                cv2.imshow('mask',mask)
+                cv2.imshow('result',res)
+            if True:
+                low, up = AppOpenCV.GetHsvRange()
+                low_bound = numpy.array(low)
+                up_bound = numpy.array(up)
+                mask = cv2.inRange(hsv,low_bound,up_bound)
+                cv2.imshow("mask", mask)
 
         frame = None
         cv2.waitKey(50)  
