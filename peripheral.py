@@ -16,6 +16,8 @@ from output.Lights import InitGPIO, SingleLight
 import adafruit_mpu6050   # https://learn.adafruit.com/mpu6050-6-dof-accelerometer-and-gyro/python-and-circuitpython
 #   sudo pip3 install adafruit-circuitpython-mpu6050
 
+from output.Lights import LIGHT_PIN
+
 class SensorsType:
     BATTERY_PERCENT = 1    # (100:12.6V, 0:10.9V)
     WATER_TEMPERATURE = 2
@@ -269,5 +271,13 @@ class Peripheral():
 if __name__ == '__main__':
 
     obj = Peripheral()
+    while True:
+        obj.TurnOnLignt(LIGHT_PIN.PIN_LIGHT_TOP)
+        time.sleep(5)
+        obj.TurnOffLignt(LIGHT_PIN.PIN_LIGHT_TOP)
+        time.sleep(5)
+
+
+
     
 
