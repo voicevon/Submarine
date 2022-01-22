@@ -31,7 +31,6 @@ class AppOpenCV:
             dtype=numpy.uint8)
         # arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
         arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2RGB)
-        cv2.imshow("aaa",arr)
         return arr
 
     @staticmethod
@@ -43,9 +42,8 @@ class AppOpenCV:
         global frame
         sample = sink.emit("pull-sample")
         frame = AppOpenCV.gst_to_opencv(sample)
-        # This doen't work, Might because threding
+        # This doesn't work, Might because threading
         # if image_arr is not None:   
-        #     # print("-----",image_arr,"----------------")
         #     cv2.imshow("appsink image arr", image_arr)
         #     cv2.waitKey(1)  
 
@@ -147,6 +145,7 @@ class AppOpenCV:
         global frame
         global frame_laser_on
         global frame_laser_off
+        cv2.waitKey(1000)
         if frame is None:
             return
         cv2.imshow("frame",frame)
@@ -165,11 +164,12 @@ class AppOpenCV:
         if frame_laser_on is None:
             return
         print("diff..............................")
-        
+        # https://stackoverflow.com/questions/11541154/checking-images-for-similarity-with-opencv
         cv2.imshow("on", frame_laser_on)
         cv2.imshow("off", frame_laser_off)
         diff = frame_laser_on - frame_laser_off
-        cv2.imshow("laser", diff)
+        cv2.imshow("diff", diff)
+        frame = None
         return
 
 

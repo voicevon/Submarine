@@ -132,11 +132,11 @@ class UwBot():
         while True:
             self.peripheral.TurnOnLignt(0)
             print("Laser is On")
-            time.sleep(1)
+            # time.sleep(1)
             CvStream.ProcessFrame(laser_is_on=True)
             self.peripheral.TurnOffLignt(0)
             print("Laser is Off")
-            time.sleep(1)
+            # time.sleep(1)
             CvStream.ProcessFrame(laser_is_on=False)
 
 
