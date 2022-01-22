@@ -1,7 +1,11 @@
 from output.propeller import MOVE_DIRECTION
 from peripheral import Peripheral, SensorsType,SensorValue
-from camera.single_camera import SingleCamera,CameraFactory
+# from camera.single_camera import SingleCamera,CameraFactory
 import time
+from camera.stream_cv import CvStream
+from camera.br_opencv import AppOpenCV
+
+
 
 class UwBot():
 
@@ -11,9 +15,13 @@ class UwBot():
         #-----------------------------------------------------------------------
         self.__started_logger = False
         self.peripheral = Peripheral()
+        uris = CvStream.GetUris()
+        CvStream.CreatePipline(uris, out_to_screen=True, out_to_opencv=True)
+        CvStream.Start("Distance to bottom")
+        print("AppOpenCv  pipiline is Started........")
         #-----------------------------------------------------------------------
-        print("Uwbot.Creatint cameras")
-        myFactory = CameraFactory()
+        # print("Uwbot.Creatint cameras")
+        # myFactory = CameraFactory()
         self.cameras = []
         # for i in range(6):
         #     new_camera = myFactory.CreateSingleCamera(i)
@@ -116,6 +124,22 @@ class UwBot():
         else:
             print("Uwbot.Move() doesn't understand what is your meaning !!")
 
+    def DetectBottomDistance(self):
+        # Turn on laser. OpenCv capture a frame as A
+        # turn off laser. OpenCV capture a frame as B
+        # Calculate  C1=A1-B1, C2=A2-B2, ... C5=A5-B5
+        # Get the laser dual point position. Then convert to distance to bottom.
+        while True:
+            self.peripheral.TurnOnLignt(0)
+            print("Laser is On")
+            time.sleep(1)
+            AppOpenCV.ProcessFrame(laser_is_on=True)
+            self.peripheral.TurnOffLignt(0)
+            print("Laser is Off")
+            time.sleep(1)
+            AppOpenCV.ProcessFrame(laser_is_on=False)
+
+
     def SpinOnce(self):
         # voltage = UwBot.read_battery()
         voltage = self.read_battery_voltage()
@@ -130,7 +154,4 @@ class UwBot():
 
 if __name__ == '__main__':
     mybot = UwBot()
-    # mybot.
-    # mybot.StartCamera(0)
-    # time.sleep(10)
-    # mybot.StartCamera(0)
+    mybot.DetectBottomDistance()

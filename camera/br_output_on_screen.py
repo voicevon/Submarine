@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from elements_jetson import ElementJetson
+from camera.elements_jetson import ElementJetson
 from gi.repository import Gst
 
 

@@ -75,6 +75,35 @@ class SensorValue:
 class Peripheral():
 
     def __init__(self) -> None:
+
+        self.__init_light()
+        # self.__init_i2c()
+
+        #-----------------------------------------------------------------------
+        # self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', baudrate=9600)
+        # self.__uart_port.timeout = 3
+        # if self.__uart_port.isOpen():
+        #     print("Uwbot.Init UART is done...")
+        # else:
+        #     print("  !!!!    !!!!  !!!!   !!!!  Uwbot.Init UART is Failed...")
+
+        #-----------------------------------------------------------------------
+
+
+        self.water_depth_log=[]
+
+    def __init_light(self):
+        self.__lights = []
+        light_pins = [15,19,29,31,33,35]
+
+        InitGPIO()
+        for i in range(6):
+            new_light = SingleLight(light_pins[i])
+            self.__lights.append(new_light)
+        print("Uwbot.Init Lights is done...")
+
+
+    def __init_i2c(self):
         #-----------------------------------------------------------------------
         i2c_bus = busio.I2C(board.SCL_1, board.SDA_1, frequency=100000)
         # List I2C device:       
@@ -93,40 +122,6 @@ class Peripheral():
         ads1015_address = 0x48
         self.__ads1015 = ADS.ADS1015(i2c_bus, address=ads1015_address)
         print("    Uwbot.Init Ads1015 is done...")
-
-        #-----------------------------------------------------------------------
-        # self.__uart_port = serial.Serial(port= '/dev/ttyTHS1', baudrate=9600)
-        # self.__uart_port.timeout = 3
-        # if self.__uart_port.isOpen():
-        #     print("Uwbot.Init UART is done...")
-        # else:
-        #     print("  !!!!    !!!!  !!!!   !!!!  Uwbot.Init UART is Failed...")
-
-        #-----------------------------------------------------------------------
-        self.__lights = []
-        light_pins = [15,19,29,31,33,35]
-        # PIN_LIGHT_TOP = 15
-        # PIN_LIGHT_BOTTOM = 19
-        # PIN_LIGHT_LEFT = 29
-        # PIN_LIGHT_RIGHT = 31
-        # PIN_LIGHT_FRONT =33
-        # PIN_LIGHT_REAR = 35
-
-    #     class LIGHT_INDEX:
-    # PIN_LIGHT_TOP = 0
-    # PIN_LIGHT_BOTTOM = 1
-    # PIN_LIGHT_LEFT = 2
-    # PIN_LIGHT_RIGHT = 3
-    # PIN_LIGHT_FRONT = 4
-    # PIN_LIGHT_REAR = 5
-        InitGPIO()
-        for i in range(6):
-            new_light = SingleLight(light_pins[i])
-            self.__lights.append(new_light)
-        print("Uwbot.Init Lights is done...")
-
-        self.water_depth_log=[]
-
 
     def read_all_sensors(self):
         pass

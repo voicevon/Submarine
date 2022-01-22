@@ -40,6 +40,7 @@ def TestLight():
             time.sleep(5)
 
 
+
 from output.propeller import MOTOR_CHANNEL
 import time
 
@@ -117,9 +118,6 @@ def TestCombineProperller():
     obj.StopAllMotors()
     time.sleep(10)
 
-  
-
-
 
 demo = {"TestSensor":TestSensor,
         "TestLights":TestLight, 
@@ -127,8 +125,8 @@ demo = {"TestSensor":TestSensor,
         "TestCombineProperller":TestCombineProperller,
          }
 # doDemo = demo["TestSensor"]
-# doDemo = demo["TestLights"]
-doDemo = demo["TestCombineProperller"]
+doDemo = demo["TestLights"]
+# doDemo = demo["TestCombineProperller"]
 # doDemo = demo["TestEachPropeller"]
 doDemo()
 

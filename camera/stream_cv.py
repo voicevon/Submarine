@@ -2,10 +2,10 @@
 
 
 import sys
+from camera.common.bus_call import bus_call
 
 sys.path.append("../")
 import pyds
-from common.bus_call import bus_call
 import time
 from ctypes import *
 import gi
@@ -13,11 +13,11 @@ gi.require_version("Gst", "1.0")
 
 from gi.repository import GObject, Gst, GLib
 
-from common.FPS import GETFPS
+from camera.common.FPS import GETFPS
 
-from elements_jetson import ElementJetson
-from br_output_on_screen import ScreenPlayer
-from br_opencv import AppOpenCV
+from camera.elements_jetson import ElementJetson
+from camera.br_output_on_screen import ScreenPlayer
+from camera.br_opencv import AppOpenCV
 import cv2
 
 fps_streams = {}
@@ -50,8 +50,8 @@ class CvStream:
         self.uris = list()
         for i in range(1):
             self.uris.append('')
-        # self.uris[0] = "rtsp://admin:a@192.168.1.81"
-        self.uris[0] = "rtsp://admin:a@192.168.1.82"
+        self.uris[0] = "rtsp://admin:a@192.168.1.81"
+        # self.uris[0] = "rtsp://admin:a@192.168.1.82"
         # self.uris[2] = "rtsp://admin:a@192.168.1.83"
         # self.uris[3] = "rtsp://admin:a@192.168.1.84"
         # self.uris[4] = "rtsp://admin:a@192.168.1.86"
@@ -190,8 +190,14 @@ class CvStream:
             return None
         return nbin
 
-
-        
+    @staticmethod
+    def GetUris():
+        uris = list()
+        for i in range(1):
+            uris.append('')
+        uris[0] = "rtsp://admin:a@192.168.1.81"
+        return uris
+    
     @staticmethod
     def CreatePipline(uris, out_to_screen=True, out_to_opencv=True):
         for i in range(0, len(uris)):
@@ -261,7 +267,7 @@ class CvStream:
     @staticmethod
     def Start(window_title):
         AppOpenCV.window_title = window_title
-        print("Starting pipeline \n")
+        print("Starting pipeline of AppOpenCv \n")
         x = CvStream.pipeline.set_state(Gst.State.PLAYING)
 
 
@@ -269,10 +275,6 @@ class CvStream:
     def Stop():
         CvStream.pipeline.set_state(Gst.State.NULL)
 
-    @staticmethod
-    def SpinOnce():
-        AppOpenCV.SpinOnce()
-        cv2.waitKey(50)  
     
 if __name__ == '__main__':
     stream = CvStream()
@@ -280,7 +282,7 @@ if __name__ == '__main__':
     CvStream.Start("Origin")
     cc = 1
     while True:
-        CvStream.SpinOnce()
+        # CvStream.SpinOnce()
         cc += 1
         if cc > 20*25:
             break

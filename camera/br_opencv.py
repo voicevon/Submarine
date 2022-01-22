@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-from elements_jetson import ElementJetson
+from camera.elements_jetson import ElementJetson
 from gi.repository import Gst
 import numpy
 import cv2
 
 frame = None
+frame_laser_on = None
+frame_laser_off = None
 
 class AppOpenCV:
     cv_counter = 0
@@ -140,8 +142,36 @@ class AppOpenCV:
         return [lowH,lowS,lowV], [upH,upS,upV]
 
     @staticmethod
-    def SpinOnce():
+    def ProcessFrame(laser_is_on):
         global frame
+        global frame_laser_on
+        global frame_laser_off
+        if frame is None:
+            return
+        cv2.imshow("frame",frame)
+        ksize = (2,2)
+        blur = cv2.blur(frame, ksize) 
+        cv2.imshow('blur',blur)
+
+        if laser_is_on:
+            frame_laser_on = blur
+            
+        else:
+            frame_laser_off = blur
+
+        if frame_laser_off is None:
+            return
+        if frame_laser_on is None:
+            return
+        print("diff..............................")
+        
+        cv2.imshow("on", frame_laser_on)
+        cv2.imshow("off", frame_laser_off)
+        diff = frame_laser_on - frame_laser_off
+        cv2.imshow("laser", diff)
+        return
+
+
         if frame is not None:   
             # print("-----",image_arr,"----------------")
             ksize = (2,2)
@@ -164,12 +194,17 @@ class AppOpenCV:
                 # cv2.imshow('blur',blur)
                 cv2.imshow('mask',mask)
                 cv2.imshow('result',res)
-            if True:
-                low, up = AppOpenCV.GetHsvRange()
-                low_bound = numpy.array(low)
-                up_bound = numpy.array(up)
-                mask = cv2.inRange(hsv,low_bound,up_bound)
-                cv2.imshow("mask", mask)
+            low, up = AppOpenCV.GetHsvRange()
+            low_bound = numpy.array(low)
+            up_bound = numpy.array(up)
+            if laser_is_on:
+                mask_on = cv2.inRange(hsv,low_bound,up_bound)
+                cv2.imshow("mask_on", mask_on)
+            else:
+                mask_off = cv2.inRange(hsv,low_bound,up_bound)
+                cv2.imshow("mask_off", mask_off)
+                # Cn = mask_on - mask_off
+
 
         frame = None
         cv2.waitKey(50)  
