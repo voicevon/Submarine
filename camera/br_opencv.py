@@ -31,6 +31,7 @@ class AppOpenCV:
             dtype=numpy.uint8)
         # arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
         arr = cv2.cvtColor(arr, cv2.COLOR_RGBA2RGB)
+        cv2.imshow("aaa",arr)
         return arr
 
     @staticmethod

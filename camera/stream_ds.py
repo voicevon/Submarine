@@ -282,7 +282,7 @@ class DsStream:
     def SpinOnce():
         AppOpenCV.SpinOnce()
         # cv2.waitKey(50)  
-    
+        
 if __name__ == '__main__':
     ds = DsStream()
     DsStream.CreatePipline(ds.uris, out_to_screen=True, out_to_file=True, out_to_opencv=True, out_to_rtsp=False )

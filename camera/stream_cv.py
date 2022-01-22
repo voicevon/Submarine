@@ -275,6 +275,9 @@ class CvStream:
     def Stop():
         CvStream.pipeline.set_state(Gst.State.NULL)
 
+    @staticmethod
+    def ProcessFrame(laser_is_on):
+        AppOpenCV.ProcessFrame(laser_is_on=laser_is_on)
     
 if __name__ == '__main__':
     stream = CvStream()

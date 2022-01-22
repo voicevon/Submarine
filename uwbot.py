@@ -3,7 +3,7 @@ from peripheral import Peripheral, SensorsType,SensorValue
 # from camera.single_camera import SingleCamera,CameraFactory
 import time
 from camera.stream_cv import CvStream
-from camera.br_opencv import AppOpenCV
+# from camera.br_opencv import AppOpenCV
 
 
 
@@ -133,11 +133,11 @@ class UwBot():
             self.peripheral.TurnOnLignt(0)
             print("Laser is On")
             time.sleep(1)
-            AppOpenCV.ProcessFrame(laser_is_on=True)
+            CvStream.ProcessFrame(laser_is_on=True)
             self.peripheral.TurnOffLignt(0)
             print("Laser is Off")
             time.sleep(1)
-            AppOpenCV.ProcessFrame(laser_is_on=False)
+            CvStream.ProcessFrame(laser_is_on=False)
 
 
     def SpinOnce(self):
