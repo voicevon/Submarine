@@ -4,10 +4,16 @@ from camera.elements_jetson import ElementJetson
 from gi.repository import Gst
 import numpy
 import cv2
+import cvzone   #pip3 install cvzone
+# from cvzone.SelfiSegmentationModule import SelfiSegmentation
+
+
+
 
 frame = None
 frame_laser_on = None
 frame_laser_off = None
+# segmentor = SelfiSegmentation()                     
 
 class AppOpenCV:
     cv_counter = 0
@@ -141,6 +147,20 @@ class AppOpenCV:
         return [lowH,lowS,lowV], [upH,upS,upV]
 
     @staticmethod
+    def ShowHsv(frame):
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+        cv2.imshow("h",h)
+        cv2.imshow("s",s)
+        cv2.imshow("v",v)
+
+    @staticmethod
+    def ProcessCvZone(frame):
+        global segmentor
+        imgForeground = segmentor.removeBG(frame,(255.0,0))
+        cv2.imshow("cvzone", imgForeground)
+
+    @staticmethod
     def ProcessFrame(laser_is_on):
         global frame
         global frame_laser_on
@@ -148,6 +168,11 @@ class AppOpenCV:
         cv2.waitKey(1000)
         if frame is None:
             return
+        
+        # AppOpenCV.ShowHsv(frame)
+        AppOpenCV.ProcessCvZone(frame)
+        return
+
         cv2.imshow("frame",frame)
         ksize = (2,2)
         blur = cv2.blur(frame, ksize) 
